@@ -50,6 +50,9 @@ void Mengled::run() {
 bool Mengled::initRaylib(){
 	InitWindow(m_settings.w, m_settings.h, "Mengled");
 	SetTargetFPS(m_settings.fps);
+#ifndef MENGLED_DEV
+	SetExitKey(KEY_NULL);
+#endif
 	if (m_settings.vsync)
 		SetWindowState(FLAG_VSYNC_HINT);
 	if (m_settings.device != -1)
@@ -106,38 +109,21 @@ void Mengled::startupWindow(){
 
 void Mengled::loop(){
 	Texture t = m_resManager.GetTexture("button");
+	Texture bkg = m_resManager.GetTexture("main_background");
 	UIManager uim;
-	for (int i = 0; i < 10; i++) {
-		uim.CreateWidget<Button>(
-			t,
-			Rectangle{ 100, 100.0f + 60.0f * static_cast<float>(i) + 10.0f, 250, 30 },
-			"Click Me",
-			[]() {
-				ToggleBorderlessWindowed();
-			});
-	}
-	bool value = true;
-	uim.CreateWidget<Checkbox>(
-		t,
-		Vector2{ 100.0f, 50.0f },
-		20,
-		"Checkbox",
-		&value
-		);
-	int val = 0;
-	uim.CreateWidget<InputInt>(
-		t,
-		Rectangle{ 400, 100, 200, 30 },
-		"Testvalue",
-		&val
-		);
-
+	uim.CreateWidget<Button>(t, Rectangle{ 10, 10, 200, 50 }, "Test Button", []() {
+		logging::loginfo("Button clicked!");
+	});
 	while (!WindowShouldClose()) {
 		uim.Update();
 		BeginDrawing();
 		ClearBackground(GRAY);
-		DrawFPS(10, 10);
+		DrawTexturePro(bkg,
+			{ 0, 0, static_cast<float>(bkg.width), static_cast<float>(bkg.height) },
+			{ 0, 0, static_cast<float>(GetScreenWidth()), static_cast<float>(GetScreenHeight()) },
+			{ 0, 0 }, 0.0f, WHITE);
 		uim.Draw();
+		DrawFPS(10, 10);
 		EndDrawing();
 	}
 	uim.clear();

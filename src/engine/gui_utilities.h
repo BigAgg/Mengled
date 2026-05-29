@@ -8,25 +8,38 @@
 
 typedef int UiWindowFlags;      // -> enum UiWindowFlags_		-> Used for UIManager.flags
 enum UiWindowFlags_ {
-	UiWindowFlags_None									= 0,
-  UiWindowFlags_NoTitleBar						= 1 << 0,		// Disable title-bar
-	UiWindowFlags_NoResize							= 1 << 1,		// Disable user resizing
-	UiWindowFlags_NoMove								= 1 << 2,		// Disable moving window
-	UiWindowFlags_NoScrollbar						= 1 << 3,		// Disable Scrollbars (Can still scroll just no draw)
-	UiWindowFlags_NoScrollWithMouse			= 1 << 4,		// Disable scrolling with mouse
-	UiWindowFlags_NoCollapse						= 1 << 5,		// Disable collapsing window by double clicking
-	UiWindowFlags_AlwaysAutoResize			= 1 << 6,		// Resize every window to its content every frame
-	UiWindowFlags_NoBackground					= 1 << 7,		// Disable drawing background colow
-	UiWindowFlags_NoSavedSettings				= 1 << 8,		// Don't load/save settings in .ini file
-	UiWindowFlags_NoMouseInputs					= 1 << 9,		// Disable mouse inputs and hovering
-	UiWindowFlags_MenuBar								= 1 << 10,	// Has a menu-bar
-	UiWindowFlags_HorizontalScrollbar		= 1 << 11,	// Allow horizontal scrollbar to appear (off by default)
+	UiWindowFlags_None					= 0,
+  	UiWindowFlags_NoTitleBar			= 1 << 0,		// Disable title-bar
+	UiWindowFlags_NoResize				= 1 << 1,		// Disable user resizing
+	UiWindowFlags_NoMove				= 1 << 2,		// Disable moving window
+	UiWindowFlags_NoScrollbar			= 1 << 3,		// Disable Scrollbars (Can still scroll just no draw)
+	UiWindowFlags_NoScrollWithMouse		= 1 << 4,		// Disable scrolling with mouse
+	UiWindowFlags_NoCollapse			= 1 << 5,		// Disable collapsing window by double clicking
+	UiWindowFlags_AlwaysAutoResize		= 1 << 6,		// Resize every window to its content every frame
+	UiWindowFlags_NoBackground			= 1 << 7,		// Disable drawing background colow
+	UiWindowFlags_NoSavedSettings		= 1 << 8,		// Don't load/save settings in .ini file
+	UiWindowFlags_NoMouseInputs			= 1 << 9,		// Disable mouse inputs and hovering
+	UiWindowFlags_MenuBar				= 1 << 10,	// Has a menu-bar
+	UiWindowFlags_HorizontalScrollbar	= 1 << 11,	// Allow horizontal scrollbar to appear (off by default)
 	UiWindowFlags_NoBringToFrontOnFocus	= 1 << 12,	// Does not bring window in front on focus
-	UiWindowFlags_NoDecoration					= 1 << 13,	// Disable background, header, outlines
-	UiWindowFlags_NoInputs							= 1 << 14,	// Disable any user input
+	UiWindowFlags_NoDecoration			= 1 << 13,	// Disable background, header, outlines
+	UiWindowFlags_NoInputs				= 1 << 14,	// Disable any user input
 };
 
+struct Style{
+	Style() = default;
+	Style(Color bg, Color fg, Color accent) : background(bg), foreground(fg), accent(accent) {}
 
+	Color background = DARKGRAY;
+	Color foreground = GRAY;
+	Color accent = RED;
+	float borderSize = 1.0f;
+	Color borderColor = BLACK;
+	int fontSize = 20;
+	Color text = WHITE;
+	Color highlighted = LIGHTGRAY;
+	Color inactive = {130, 130, 130, 200};
+};
 
 class Widget {
 public:
@@ -118,6 +131,76 @@ private:
 	int stepshift;
 	Button stepPlus;
 	Button stepMinus;
+	std::string valStr;
+};
+
+class InputDouble : public Widget {
+public:
+	using Callback = std::function<void()>;
+	InputDouble(Texture& t, Rectangle bounds, std::string text, double* val, double step = 0.1, double stepshift = 1.0, Callback onClick = nullptr);
+
+	void Update();
+	void Draw() const;
+	Rectangle GetBounds() const;
+
+	void SetPosition(float x, float y);
+	void SetSize(float width, float height);
+
+	void SetText(const std::string& text);
+	void SetFormat(const std::string& format) {
+		formatStr = format;
+	}
+
+	std::string FormatValue() const;
+
+private:
+	Rectangle bounds;
+	Rectangle trect;
+	Texture texture;
+	std::string label;
+	Callback callback;
+	bool hovered = false;
+	bool pressed = false;
+	double* val = nullptr;
+	double step;
+	double stepshift;
+	Button stepPlus;
+	Button stepMinus;
+	std::string valStr;
+	std::string formatStr = "%.2f";
+};
+
+class InputFloat : public InputDouble {
+public:
+	InputFloat(Texture& t, Rectangle bounds, std::string text, float* val, float step = 0.1f, float stepshift = 1.0f, Callback onClick = nullptr)
+		: InputDouble(t, bounds, text, reinterpret_cast<double*>(val), step, stepshift, onClick) {}
+	
+};
+
+class InputString : public Widget {
+public:
+	using Callback = std::function<void()>;
+	InputString(Texture& t, Rectangle bounds, std::string text, std::string* val, size_t limit=256, Callback onClick = nullptr);
+
+	void Update();
+	void Draw() const;
+	Rectangle GetBounds() const;
+
+	void SetPosition(float x, float y);
+	void SetSize(float width, float height);
+
+	void SetText(const std::string& text);
+private:
+	Rectangle bounds;
+	Rectangle trect;
+	Texture texture;
+	std::string label;
+	Callback callback;
+	bool hovered = false;
+	bool pressed = false;
+	size_t limit;
+	std::string* val = nullptr;
+	std::string inputStr;
 };
 
 class UIManager {
