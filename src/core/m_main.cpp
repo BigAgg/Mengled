@@ -11,12 +11,29 @@
 namespace fs = std::filesystem;
 
 int m_main(int argc, char* argv[]) {
+	std::string args;
+	for (int i = 0; i < argc; i++) {
+		args += "\t\t";
+		if(i == 0)
+			args += "(executable path): ";
+		args += argv[i];
+		if(i != argc - 1)
+			args += "\n";
+	}
+  #ifndef NDEBUG
+  if (!fs::exists("logs/"))
+    fs::create_directories("logs/");
+  logging::startlogging("logs/", "log_" + strings::GetTimestamp() + ".txt");
+  #endif
+	logging::loginfo("Starting Mengled with arguments:\n%s", args.c_str());
+
 	try {
 		Mengled m;
 		m.run();
 	}
 	catch (const std::exception& e) {
 		logging::logerror("[m_main] %s", e.what());
+    logging::backuplog("logs/", true);
 		return EXIT_FAILURE;
 	}
 	return EXIT_SUCCESS;
@@ -110,23 +127,41 @@ void Mengled::startupWindow(){
 void Mengled::loop(){
 	Texture t = m_resManager.GetTexture("button");
 	Texture bkg = m_resManager.GetTexture("main_background");
-	UIManager uim;
-	uim.CreateWidget<Button>(t, Rectangle{ 10, 10, 200, 50 }, "Test Button", []() {
-		logging::loginfo("Button clicked!");
-	});
+  WindowManager wm;
+  auto ptr = wm.CreateWindow();
+  ptr->SetName("Test Window");
+  ptr->SetPosition(100, 100);
+  ptr->SetSize(300, 200);
+  ptr->CreateWidget<Button>(t, Rectangle{ 10, 35, 200, 50 }, "Test Button", []() {
+    logging::loginfo("Button clicked!");
+  });
+  ptr->CreateWidget<Button>(t, Rectangle{ 220, 70, 200, 50 }, "Test Button", []() {
+    logging::loginfo("Button clicked!");
+  });
+
+  ptr = wm.CreateWindow();
+  ptr->GetStyle()->background = { 50, 50, 50, 255 };
+  ptr->GetStyle()->accent = { 200, 0, 0, 255 };
+  ptr->SetName("Test Window 2");
+  ptr->SetPosition(450, 100);
+  ptr->SetSize(300, 200);
+  ptr->CreateWidget<Button>(t, Rectangle{ 10, 35, 200, 50 }, "Test Button", []() {
+    logging::loginfo("Button clicked!");
+   });
+
 	while (!WindowShouldClose()) {
-		uim.Update();
+    wm.Update();
 		BeginDrawing();
 		ClearBackground(GRAY);
 		DrawTexturePro(bkg,
 			{ 0, 0, static_cast<float>(bkg.width), static_cast<float>(bkg.height) },
 			{ 0, 0, static_cast<float>(GetScreenWidth()), static_cast<float>(GetScreenHeight()) },
 			{ 0, 0 }, 0.0f, WHITE);
-		uim.Draw();
+		wm.Draw();
 		DrawFPS(10, 10);
 		EndDrawing();
 	}
-	uim.clear();
+	wm.clear();
 }
 
 void Mengled::loadSettings(){

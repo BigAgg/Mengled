@@ -17,12 +17,11 @@ Button::Button(Texture &t, Rectangle rect, std::string text, Callback onClick)
 	trect.height = static_cast<float>(t.height);
 }
 
-void Button::Update() {
+void Button::Update(const Vector2 mousePos) {
 	if (!enabled)
 		return;
 
-	Vector2 mouse = GetMousePosition();
-	hovered = CheckCollisionPointRec(mouse, bounds);
+	hovered = CheckCollisionPointRec(mousePos, bounds);
 	if (!hovered)
 		return;
 
@@ -74,39 +73,132 @@ void Widget::SetEnabled(bool value) {
 }
 
 void UIManager::Update() {
+  if(!enabled)
+    return; 
+  if(!active)
+    return;
+  Vector2 mousePos = GetMousePosition();
+  if(!IsFlagActive(UiWindowFlags_NoMove)){
+    if(IsMouseButtonPressed(MOUSE_LEFT_BUTTON) && CheckCollisionPointRec(mousePos, window)){
+      dragging = true;
+      for(auto& widget : widgets){
+        Rectangle bounds = widget->GetBounds();
+        bounds.x += window.x;
+        bounds.y += window.y;
+        if(CheckCollisionPointRec(mousePos, bounds)){
+          dragging = false;
+          break;
+        }
+      }
+    }
+    else if(IsMouseButtonReleased(MOUSE_LEFT_BUTTON))
+      dragging = false;
+    if(dragging){
+      Vector2 delta = GetMouseDelta();
+      window.x += delta.x;
+      window.y += delta.y;
+    }
+  }
+  if(!CheckCollisionPointRec(mousePos, window))
+    return;
+  mousePos.x -= window.x;
+  mousePos.y -= window.y;
 	for (auto& widget : widgets) {
 		if (!widget->visible)
 			continue;
-		widget->Update();
+		widget->Update(mousePos);
 	}
 }
 
 void UIManager::Draw() {
+  if(!enabled)
+    return;
+  BeginTextureMode(windowTexture);
+  ClearBackground({0, 0, 0, 0});
+  if (!IsFlagActive(UiWindowFlags_NoBackground)) {
+    DrawRectangleRounded(logicalWindow, style.borderRounding, 8, style.background);
+  }
+  if(!IsFlagActive(UiWindowFlags_NoTitleBar))
+    m_DrawTitlebar();
+
 	for (const auto& widget : widgets) {
 		if (!widget->visible)
 			continue;
 		widget->Draw();
 	}
+  EndTextureMode();
+  DrawTexturePro(windowTexture.texture, {0, 0, static_cast<float>(windowTexture.texture.width), static_cast<float>(-windowTexture.texture.height)}, window, {0, 0}, 0.0f, WHITE);
+  if(!IsFlagActive(UiWindowFlags_NoBackground))
+    DrawRectangleRoundedLinesEx(window, style.borderRounding, 8, style.borderSize, style.borderColor);
 }
 
 void UIManager::clear() {
 	widgets.clear();
 }
 
+void UIManager::SetPosition(float x, float y) {
+  window.x = x;
+  window.y = y;
+  logicalWindow.x = x;
+  logicalWindow.y = y;
+}
+
+void UIManager::SetSize(float width, float height) {
+  window.width = width;
+  window.height = height;
+  UnloadRenderTexture(windowTexture);
+  windowTexture = LoadRenderTexture(
+    static_cast<int>(window.width),
+    static_cast<int>(window.height));
+}
+
 void UIManager::SetFlags(UiWindowFlags flags) {
-	this->flags = flags;
+  this->flags = flags;
 }
 
 void UIManager::SetFlag(UiWindowFlags flag) {
-	flags = flags | flag;
+  flags = flags | flag;
 }
 
 void UIManager::ClearFlag(UiWindowFlags flag) {
-	flags = flags & flag;
+  flags = flags & ~flag;
 }
 
 bool UIManager::IsFlagActive(UiWindowFlags flag) {
-	return flags & flag;
+  return (flags & flag) == flag;
+}
+
+void UIManager::SetName(const std::string& name) {
+  this->name = name;
+}
+
+void UIManager::m_DrawTitlebar() {
+  DrawRectangleRec({0, 0, window.width, style.titlebarHeight}, style.accent);
+  DrawText(name.c_str(), static_cast<int>(style.spacing), static_cast<int>(style.titlebarHeight / 2 - style.fontSize / 2), style.fontSize, WHITE);
+  DrawLineEx({0,style.titlebarHeight}, {window.width, style.titlebarHeight}, style.borderSize, style.borderColor);
+}
+
+void WindowManager::clear() {
+  windows.clear();
+}
+
+void WindowManager::Update() {
+  if(windows.empty())
+    return;
+  Vector2 mousePos = GetMousePosition();
+  for(size_t i = 0; i < windows.size(); i++){
+    if(IsMouseButtonPressed(MOUSE_LEFT_BUTTON) && !CheckCollisionPointRec(mousePos, windows.back()->GetWindowRect()) && CheckCollisionPointRec(mousePos, windows[i]->GetWindowRect())){
+      std::swap(windows[windows.size() - 1], windows[i]);
+      break;
+    }
+  }
+  windows[windows.size() - 1]->Update();
+}
+
+void WindowManager::Draw() {
+  for (auto& window : windows) {
+    window->Draw();
+  }
 }
 
 Checkbox::Checkbox(Texture& t, Vector2 position, float size, std::string text, bool* val, Callback onClick)
@@ -123,12 +215,11 @@ Checkbox::Checkbox(Texture& t, Vector2 position, float size, std::string text, b
 	trect.height = static_cast<float>(t.height);
 }
 
-void Checkbox::Update() {
+void Checkbox::Update(const Vector2 mousePos) {
 	if (!enabled)
 		return;
 
-	Vector2 mouse = GetMousePosition();
-	hovered = CheckCollisionPointRec(mouse, bounds);
+	hovered = CheckCollisionPointRec(mousePos, bounds);
 	if (!hovered)
 		return;
 
@@ -210,13 +301,12 @@ InputInt::InputInt(Texture& t, Rectangle bounds, std::string text, int* val, int
 		})
 {}
 
-void InputInt::Update() {
+void InputInt::Update(const Vector2 mousePos) {
 	if (!enabled)
 		return;
-	stepPlus.Update();
-	stepMinus.Update();
-	Vector2 mouse = GetMousePosition();
-	hovered = CheckCollisionPointRec(mouse, bounds);
+	stepPlus.Update(mousePos);
+	stepMinus.Update(mousePos);
+	hovered = CheckCollisionPointRec(mousePos, bounds);
 	if (!hovered && !pressed)
 		return;
 
@@ -335,13 +425,12 @@ InputDouble::InputDouble(Texture& t, Rectangle bounds, std::string text, double*
 		})
 {}
 
-void InputDouble::Update(){
+void InputDouble::Update(const Vector2 mousePos) {
 	if (!enabled)
 		return;
-	stepPlus.Update();
-	stepMinus.Update();
-	Vector2 mouse = GetMousePosition();
-	hovered = CheckCollisionPointRec(mouse, bounds);
+	stepPlus.Update(mousePos);
+	stepMinus.Update(mousePos);
+	hovered = CheckCollisionPointRec(mousePos, bounds);
 	if (!hovered && !pressed)
 		return;
 
@@ -450,12 +539,11 @@ InputString::InputString(Texture& t, Rectangle bounds, std::string text, std::st
 	: texture(t), bounds(bounds), label(text), val(val), limit(limit), callback(onClick), trect(0, 0, t.width, t.height)
 {}
 
-void InputString::Update() {
+void InputString::Update(const Vector2 mousePos) {
 	if (!enabled)
 		return;
 
-	Vector2 mouse = GetMousePosition();
-	hovered = CheckCollisionPointRec(mouse, bounds);
+	hovered = CheckCollisionPointRec(mousePos, bounds);
 	if (!hovered && !pressed)
 		return;
 
