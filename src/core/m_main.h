@@ -3,6 +3,7 @@
 #define MENGLED_DEV
 
 #include "engine/resourcemanager.h"
+#include "engine/gui_utilities.h"
 
 int m_main(int argc, char* argv[]);
 
@@ -21,6 +22,12 @@ private:
 	// Main loop
 	void loop();
 
+  // Menu setups
+  void setupMenus();
+  void setupMainMenu();
+  void setupSettingsMenu();
+  void setupLoadGameMenu();
+
 	// Loading / Saving core ressources
 	void loadSettings();
 	void saveSettings();
@@ -36,5 +43,7 @@ private:
 		bool borderless, vsync;
 	}m_settings;
 
+  bool m_close = false;
 	ResourceManager m_resManager;
+  WindowManager m_wm;
 };

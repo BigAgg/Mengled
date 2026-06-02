@@ -1,5 +1,6 @@
 #pragma once
 
+#include <algorithm>
 #include <concepts>
 #include <raylib.h>
 #include <functional>
@@ -78,6 +79,39 @@ private:
 	Callback callback;
 	bool hovered = false;
 	bool pressed = false;
+};
+
+class ComboBox : public Widget {
+  public:
+    using Callback = std::function<void(const std::string& option)>;
+    ComboBox(const std::string& label, Texture& t, Rectangle rect, std::vector<std::string> options, int selectedIndex, Callback onChange);
+
+    void Update(const Vector2 mousePos);
+    void Draw() const;
+    Rectangle GetBounds() const;
+
+    void SetPosition(float x, float y);
+    void SetSize(float width, float height);
+
+    void SetOptions(const std::vector<std::string>& options);
+    std::vector<std::string> GetOptions();
+    void SetSelectedIndex(int index);
+    int GetSelectedIndex() const;
+    void SetText(const std::string& text);
+    void SetLabel(const std::string& text);
+    bool Selecting() const;
+
+  private:
+    Rectangle bounds;
+    Rectangle trect;
+    Texture texture;
+    std::vector<std::string> options;
+    int selectedIndex = -1;
+    std::string label;
+    Callback callback;
+    bool hovered = false;
+    bool pressed = false;
+    bool selecting = false;
 };
 
 class Checkbox : public Widget {
@@ -245,7 +279,22 @@ public:
     windowTexture = LoadRenderTexture(
       static_cast<int>(window.width),
       static_cast<int>(window.height));
-		return ptr;
+    // sort the comboboxes to be at the end of the vector and order them to have the highest y pos to be at the end
+    std::stable_partition(widgets.begin(), widgets.end(), [](const std::unique_ptr<Widget>& widget){
+      return dynamic_cast<ComboBox*>(widget.get()) == nullptr;
+    });
+    for(size_t i = 0; i < widgets.size(); i++){
+      if(dynamic_cast<ComboBox*>(widgets[i].get()) != nullptr){
+        for(size_t j = i + 1; j < widgets.size(); j++){
+          if(dynamic_cast<ComboBox*>(widgets[j].get()) != nullptr){
+            if(widgets[i]->GetBounds().y < widgets[j]->GetBounds().y){
+              std::swap(widgets[i], widgets[j]);
+            }
+          }
+        }
+      }
+    }
+    return ptr;
 	}
 
 	void Update();
@@ -255,11 +304,18 @@ public:
   void SetPosition(float x, float y);
   void SetSize(float width, float height);
   void SetName(const std::string& name);
+  std::string GetName() const;
 
 	void SetFlags(UiWindowFlags flags);
 	void SetFlag(UiWindowFlags flag);
 	void ClearFlag(UiWindowFlags flag);
 	bool IsFlagActive(UiWindowFlags flag);
+
+  void SetEnabled(bool value);
+  bool GetEnabled() const;
+  void SetActive(bool value);
+  bool GetActive() const;
+
 
   Style* GetStyle() {
     return &style;
@@ -300,9 +356,48 @@ public:
     return ptr;
   }
   void clear();
-
   void Update();
   void Draw();
+
+  UIManager* GetActiveWindow(){
+    if(windows.empty())
+      return nullptr;
+    return windows.back().get();
+  }
+  UIManager* GetWindow(size_t index){
+    if(index >= windows.size())
+      return nullptr;
+    return windows[index].get();
+  }
+  UIManager* GetWindow(const std::string& name){
+    for(auto& window : windows){
+      if(window->GetName() == name)
+        return window.get();
+    }
+    return nullptr;
+  }
+  UIManager* GetWindowIndex(const std::string& name){
+    for(size_t i = 0; i < windows.size(); i++){
+      if(windows[i]->GetName() == name)
+        return windows[i].get();
+    }
+    return nullptr;
+  }
+
+  void EnableSingleWindow(const std::string& name){
+    size_t index = -1;
+    for(size_t i = 0; i < windows.size(); i++){
+      if(windows[i]->GetName() == name){
+        index = i;
+      }
+      windows[i]->SetEnabled(false);
+    }
+    if(index != -1){
+      windows[index]->SetEnabled(true);
+      windows[index]->SetActive(true);
+      std::swap(windows[windows.size() - 1], windows[index]);
+    }
+  }
 
 private:
   std::vector<std::unique_ptr<UIManager>> windows;

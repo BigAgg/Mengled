@@ -27,8 +27,10 @@ void Button::Update(const Vector2 mousePos) {
 
 	pressed = hovered && IsMouseButtonPressed(MOUSE_LEFT_BUTTON);
 
-	if (pressed && callback)
+	if (pressed && callback){
+    hovered = false;
 		callback();
+  }
 }
 
 void Button::Draw() const {
@@ -68,6 +70,124 @@ void Button::SetText(const std::string& text) {
 	label = text;
 }
 
+ComboBox::ComboBox(const std::string& label, Texture& t, Rectangle rect, std::vector<std::string> options, int selectedIndex, Callback onChange)
+: texture(t), bounds(rect), options(std::move(options)), selectedIndex(selectedIndex), callback(onChange){
+  trect.x = 0;
+  trect.y = 0;
+  trect.width = static_cast<float>(t.width);
+  trect.height = static_cast<float>(t.height);
+}
+
+void ComboBox::Update(const Vector2 mousePos) {
+  if (!enabled)
+    return;
+
+  hovered = CheckCollisionPointRec(mousePos, bounds);
+
+  pressed = hovered && IsMouseButtonPressed(MOUSE_LEFT_BUTTON);
+
+  if(selecting){
+    for(size_t i = 0; i < options.size(); i++){
+      Rectangle optionRect = {bounds.x, bounds.y + bounds.height * (i + 1), bounds.width, bounds.height};
+      if(CheckCollisionPointRec(mousePos, optionRect) && IsMouseButtonReleased(MOUSE_LEFT_BUTTON)){
+        selectedIndex = static_cast<int>(i);
+        selecting = false;
+        if(callback)
+          callback(options[selectedIndex]);
+        break;
+      }
+    }
+  }
+
+  if (pressed) {
+    hovered = false;
+    selecting = !selecting;
+  }
+}
+
+void ComboBox::Draw() const {
+  Color color = GRAY;
+
+  if (!enabled)
+    color = DARKGRAY;
+  else if (hovered)
+    color = WHITE;
+
+  DrawTexturePro(texture, trect, bounds, { 0, 0 }, 0.0f, color);
+  DrawText(label.c_str(),
+    static_cast<int>(bounds.x + bounds.width + 5),
+    static_cast<int>(bounds.y + bounds.height / 2 - FONT_SIZE / 2),
+    FONT_SIZE,
+    WHITE);
+
+  std::string displayText = selectedIndex >= 0 && selectedIndex < options.size() ? options[selectedIndex] : "Select";
+  int textWidth = MeasureText(displayText.c_str(), FONT_SIZE);
+
+  DrawText(displayText.c_str(),
+    static_cast<int>(bounds.x + (bounds.width - textWidth) / 2),
+    static_cast<int>(bounds.y + bounds.height / 2 - FONT_SIZE / 2),
+    FONT_SIZE,
+    WHITE);
+
+  if(selecting){
+    for(size_t i = 0; i < options.size(); i++){
+      Rectangle optionRect = {bounds.x, bounds.y + bounds.height * (i + 1), bounds.width, bounds.height};
+      DrawTexturePro(texture, trect, optionRect, { 0, 0 }, 0.0f, i == selectedIndex ? GRAY : ORANGE);
+      DrawText(options[i].c_str(),
+        static_cast<int>(optionRect.x + (optionRect.width - MeasureText(options[i].c_str(), FONT_SIZE)) / 2),
+        static_cast<int>(optionRect.y + optionRect.height / 2 - FONT_SIZE / 2),
+        FONT_SIZE,
+        WHITE);
+    }
+  }
+}
+
+Rectangle ComboBox::GetBounds() const {
+  return {bounds.x, bounds.y, bounds.width + MeasureText(label.c_str(), FONT_SIZE) + 10, bounds.height * (options.size() + 1)};
+}
+
+void ComboBox::SetPosition(float x, float y) {
+  bounds.x = x;
+  bounds.y = y;
+}
+
+void ComboBox::SetSize(float width, float height) {
+  bounds.width = width;
+  bounds.height = height;
+}
+
+void ComboBox::SetText(const std::string& text) {
+  if(selectedIndex >= 0 && selectedIndex < options.size())
+    options[selectedIndex] = text;
+}
+
+void ComboBox::SetLabel(const std::string& text) {
+  label = text;
+}
+
+bool ComboBox::Selecting() const {
+  return selecting;
+}
+
+void ComboBox::SetOptions(const std::vector<std::string>& newOptions) {
+  options = newOptions;
+  if(selectedIndex >= options.size())
+    selectedIndex = -1;
+}
+
+std::vector<std::string> ComboBox::GetOptions() {
+  return options;
+}
+
+void ComboBox::SetSelectedIndex(int index) {
+  if(index >= 0 && index < options.size())
+    selectedIndex = index;
+}
+
+int ComboBox::GetSelectedIndex() const {
+  return selectedIndex;
+}
+
 void Widget::SetEnabled(bool value) {
 	enabled = value;
 }
@@ -103,10 +223,16 @@ void UIManager::Update() {
     return;
   mousePos.x -= window.x;
   mousePos.y -= window.y;
-	for (auto& widget : widgets) {
+	for (size_t i = widgets.size(); i > 0; i--) {
+    auto& widget = widgets[i - 1];
 		if (!widget->visible)
 			continue;
 		widget->Update(mousePos);
+    if(dynamic_cast<ComboBox*>(widget.get()) != nullptr){
+      // check if selecting is active and break
+      if(dynamic_cast<ComboBox*>(widget.get())->Selecting())
+        break;
+    }
 	}
 }
 
@@ -172,10 +298,30 @@ void UIManager::SetName(const std::string& name) {
   this->name = name;
 }
 
+std::string UIManager::GetName() const {
+  return name;
+}
+
 void UIManager::m_DrawTitlebar() {
   DrawRectangleRec({0, 0, window.width, style.titlebarHeight}, style.accent);
   DrawText(name.c_str(), static_cast<int>(style.spacing), static_cast<int>(style.titlebarHeight / 2 - style.fontSize / 2), style.fontSize, WHITE);
   DrawLineEx({0,style.titlebarHeight}, {window.width, style.titlebarHeight}, style.borderSize, style.borderColor);
+}
+
+void UIManager::SetEnabled(bool value) {
+  enabled = value;
+}
+
+bool UIManager::GetEnabled() const {
+  return enabled;
+}
+
+void UIManager::SetActive(bool value) {
+  active = value;
+}
+
+bool UIManager::GetActive() const {
+  return active;
 }
 
 void WindowManager::clear() {
@@ -226,6 +372,7 @@ void Checkbox::Update(const Vector2 mousePos) {
 	pressed = hovered && IsMouseButtonPressed(MOUSE_LEFT_BUTTON);
 
 	if (pressed) {
+    hovered = false;
 		*val = !*val;
 		if(callback)
 			callback();
@@ -307,8 +454,10 @@ void InputInt::Update(const Vector2 mousePos) {
 	stepPlus.Update(mousePos);
 	stepMinus.Update(mousePos);
 	hovered = CheckCollisionPointRec(mousePos, bounds);
-	if (!hovered && !pressed)
+	if (!hovered && !pressed){
+    hovered = false;
 		return;
+  }
 
 	if(hovered && IsMouseButtonReleased(MOUSE_LEFT_BUTTON)){
 		pressed = true;
@@ -431,8 +580,10 @@ void InputDouble::Update(const Vector2 mousePos) {
 	stepPlus.Update(mousePos);
 	stepMinus.Update(mousePos);
 	hovered = CheckCollisionPointRec(mousePos, bounds);
-	if (!hovered && !pressed)
+	if (!hovered && !pressed){
+    hovered = false;
 		return;
+  }
 
 	if(hovered && IsMouseButtonReleased(MOUSE_LEFT_BUTTON)){
 		pressed = true;
@@ -544,8 +695,10 @@ void InputString::Update(const Vector2 mousePos) {
 		return;
 
 	hovered = CheckCollisionPointRec(mousePos, bounds);
-	if (!hovered && !pressed)
+	if (!hovered && !pressed){
+    hovered = false;
 		return;
+  }
 
 	if(hovered && IsMouseButtonReleased(MOUSE_LEFT_BUTTON)){
 		pressed = true;

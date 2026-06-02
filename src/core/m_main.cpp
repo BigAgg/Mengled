@@ -8,6 +8,10 @@
 #include <raylib.h>
 #include <rlImGui.h>
 
+#ifdef MENGLED_DEV
+#include "editor/editor.h"
+#endif
+
 namespace fs = std::filesystem;
 
 int m_main(int argc, char* argv[]) {
@@ -60,6 +64,7 @@ void Mengled::run() {
 #ifndef MENGLED_DEV
 	startupWindow();
 #endif
+  setupMenus();
 	loop();
 	saveSettings();
 }
@@ -125,43 +130,91 @@ void Mengled::startupWindow(){
 }
 
 void Mengled::loop(){
-	Texture t = m_resManager.GetTexture("button");
 	Texture bkg = m_resManager.GetTexture("main_background");
-  WindowManager wm;
-  auto ptr = wm.CreateWindow();
-  ptr->SetName("Test Window");
-  ptr->SetPosition(100, 100);
-  ptr->SetSize(300, 200);
-  ptr->CreateWidget<Button>(t, Rectangle{ 10, 35, 200, 50 }, "Test Button", []() {
-    logging::loginfo("Button clicked!");
-  });
-  ptr->CreateWidget<Button>(t, Rectangle{ 220, 70, 200, 50 }, "Test Button", []() {
-    logging::loginfo("Button clicked!");
-  });
-
-  ptr = wm.CreateWindow();
-  ptr->GetStyle()->background = { 50, 50, 50, 255 };
-  ptr->GetStyle()->accent = { 200, 0, 0, 255 };
-  ptr->SetName("Test Window 2");
-  ptr->SetPosition(450, 100);
-  ptr->SetSize(300, 200);
-  ptr->CreateWidget<Button>(t, Rectangle{ 10, 35, 200, 50 }, "Test Button", []() {
-    logging::loginfo("Button clicked!");
-   });
-
-	while (!WindowShouldClose()) {
-    wm.Update();
+  
+	while (!WindowShouldClose() && !m_close) {
+    if(IsWindowResized()){
+      auto ptr = m_wm.GetWindow("Main Menu");
+      const Rectangle MENU_BOUNDS = ptr->GetWindowRect();
+      ptr->SetPosition(GetScreenWidth() / 2 - MENU_BOUNDS.width / 2, GetScreenHeight() / 2 - MENU_BOUNDS.height / 2);
+    }
+    m_wm.Update();
 		BeginDrawing();
 		ClearBackground(GRAY);
 		DrawTexturePro(bkg,
 			{ 0, 0, static_cast<float>(bkg.width), static_cast<float>(bkg.height) },
 			{ 0, 0, static_cast<float>(GetScreenWidth()), static_cast<float>(GetScreenHeight()) },
 			{ 0, 0 }, 0.0f, WHITE);
-		wm.Draw();
+		m_wm.Draw();
 		DrawFPS(10, 10);
 		EndDrawing();
 	}
-	wm.clear();
+}
+
+void Mengled::setupMenus(){
+  setupMainMenu();
+  setupSettingsMenu();
+  m_wm.EnableSingleWindow("Main Menu");
+}
+
+void Mengled::setupMainMenu(){
+	Texture t = m_resManager.GetTexture("button");
+  float buttonypos = 20;
+  auto ptr = m_wm.CreateWindow();
+  ptr->SetName("Main Menu");
+  ptr->SetFlags(
+    UiWindowFlags_NoMove |
+    UiWindowFlags_NoResize |
+    UiWindowFlags_NoTitleBar |
+    UiWindowFlags_NoBackground);
+  ptr->CreateWidget<Button>(t, Rectangle{ 20, buttonypos, 150, 50 }, "New", []() {
+    logging::loginfo("New Game button clicked!");
+  });
+  buttonypos += 70;
+  ptr->CreateWidget<Button>(t, Rectangle{ 20, buttonypos, 150, 50 }, "Load", []() {
+    logging::loginfo("Load Game button clicked!");
+  });
+  buttonypos += 70;
+#ifdef MENGLED_DEV
+  ptr->CreateWidget<Button>(t, Rectangle{ 20, buttonypos, 150, 50 }, "Editor", []() {
+    logging::loginfo("Start Editor button clicked!");
+    Editor e;
+    e.run();
+  });
+  buttonypos += 70;
+#endif
+  ptr->CreateWidget<Button>(t, Rectangle{ 20, buttonypos, 150, 50 }, "Settings",
+    [&]() {
+      m_wm.EnableSingleWindow("Settings Menu");
+  });
+  buttonypos += 70;
+  ptr->CreateWidget<Button>(t, Rectangle{ 20, buttonypos, 150, 50 }, "Exit", [&]() {
+    m_close = true;
+  });
+  buttonypos += 70;
+  // test dropdown
+  ptr->CreateWidget<ComboBox>("Resolution", t, Rectangle{ 20, buttonypos, 150, 50 }, std::vector<std::string>{"1920x1080", "1280x720", "800x600"}, 0, [](const std::string& option) {
+    logging::loginfo("Selected resolution: %s", option.c_str());
+  });
+
+  const Rectangle MENU_BOUNDS = ptr->GetWindowRect();
+  ptr->SetPosition(GetScreenWidth() / 2 - MENU_BOUNDS.width / 2, GetScreenHeight() / 2 - MENU_BOUNDS.height / 2);
+}
+
+void Mengled::setupSettingsMenu(){
+  Texture t = m_resManager.GetTexture("button");
+  float buttonypos = 20;
+  auto ptr = m_wm.CreateWindow();
+  ptr->SetName("Settings Menu");
+  ptr->SetFlags(
+    UiWindowFlags_NoMove |
+    UiWindowFlags_NoResize |
+    UiWindowFlags_NoTitleBar |
+    UiWindowFlags_NoBackground);
+  ptr->CreateWidget<Button>(t, Rectangle{ 20, buttonypos, static_cast<float>(MeasureText("Back to Main Menu", 20) + 20*3), 50 }, "Back to Main Menu", [&]() {
+    m_wm.EnableSingleWindow("Main Menu");
+  });
+  ptr->SetPosition(20, 20);
 }
 
 void Mengled::loadSettings(){
@@ -189,4 +242,5 @@ bool Mengled::initEditor(){
 }
 
 void Mengled::cleanup() {
+  m_wm.clear();
 }
