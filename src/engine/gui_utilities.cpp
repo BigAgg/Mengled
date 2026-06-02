@@ -71,7 +71,7 @@ void Button::SetText(const std::string& text) {
 }
 
 ComboBox::ComboBox(const std::string& label, Texture& t, Rectangle rect, std::vector<std::string> options, int selectedIndex, Callback onChange)
-: texture(t), bounds(rect), options(std::move(options)), selectedIndex(selectedIndex), callback(onChange){
+: label(label), texture(t), bounds(rect), options(std::move(options)), selectedIndex(selectedIndex), callback(onChange){
   trect.x = 0;
   trect.y = 0;
   trect.width = static_cast<float>(t.width);
