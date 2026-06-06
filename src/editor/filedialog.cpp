@@ -16,14 +16,16 @@ std::string OpenFileDialog(const std::vector<std::string>& filters, std::string 
       filterCount++;
     }
   }
-  nfdu8filteritem_t filter[filterCount];
+  std::vector<nfdu8filteritem_t> filter;
+  filter.reserve(filterCount);
+  //nfdu8filteritem_t filter[filterCount];
   for(int i = 0; i < filterCount; i++){
     filter[i].name = filterlist[i].first.c_str();
     filter[i].spec = filterlist[i].second.c_str();
   }
   filterlist.clear();
   nfdopendialogu8args_t args = {0};
-  args.filterList = filter;
+  args.filterList = filter.data();
   args.filterCount = filterCount;
   nfdresult_t result = NFD_OpenDialogU8_With(&outPath, &args);
   std::string outStr = ""; 
@@ -55,14 +57,16 @@ std::string SaveFileDialog(const std::vector<std::string>& filters, std::string 
       filterCount++;
     }
   }
-  nfdu8filteritem_t filter[filterCount];
+  std::vector<nfdu8filteritem_t> filter;
+  filter.reserve(filterCount);
+  //nfdu8filteritem_t filter[filterCount];
   for(int i = 0; i < filterCount; i++){
     filter[i].name = filterlist[i].first.c_str();
     filter[i].spec = filterlist[i].second.c_str();
   }
   filterlist.clear();
 	nfdsavedialogu8args_t args = {0};
-	args.filterList = filter;
+	args.filterList = filter.data();
 	args.filterCount = filterCount;
 	// Retrieving picked file
 	nfdresult_t result = NFD_SaveDialogU8_With(&outPath, &args);

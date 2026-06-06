@@ -26,7 +26,6 @@ private:
   void setupMenus();
   void setupMainMenu();
   void setupSettingsMenu();
-  void setupLoadGameMenu();
 
 	// Loading / Saving core ressources
 	void loadSettings();

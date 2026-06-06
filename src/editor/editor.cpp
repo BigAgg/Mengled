@@ -3,7 +3,7 @@
 #include "engine/resourcemanager.h"
 #include "utils/logging.h"
 #include "themes.h"
-#include "filedialog.h"
+//#include "filedialog.h"
 #include <filesystem>
 #include <rlImGui.h>
 #include <imgui.h>
@@ -77,13 +77,13 @@ void Editor::taskbar() {
     // File handling
     if(ImGui::BeginMenu("File")){
       if(ImGui::MenuItem("New Project")){
-        logging::loginfo("Selected folder: %s", OpenDirectoryDialog().c_str());
+        //logging::loginfo("Selected folder: %s", OpenDirectoryDialog().c_str());
       }
       if(ImGui::MenuItem("Load Project")){
-        logging::loginfo("Selected Project: %s", OpenFileDialog({FILE_PROJECT_FILTER, FILE_PROJECT_FILTER_BIN}).c_str());
+        //logging::loginfo("Selected Project: %s", OpenFileDialog({FILE_PROJECT_FILTER, FILE_PROJECT_FILTER_BIN}).c_str());
       }
       if(ImGui::MenuItem("Save as")){
-        logging::loginfo("Saving as: %s", SaveFileDialog({FILE_PROJECT_FILTER, FILE_PROJECT_FILTER_BIN}).c_str());
+        //logging::loginfo("Saving as: %s", SaveFileDialog({FILE_PROJECT_FILTER, FILE_PROJECT_FILTER_BIN}).c_str());
       }
       if(ImGui::MenuItem("Exit"))
         m_close = true;
