@@ -23,7 +23,6 @@ std::string OpenFileDialog(const std::vector<std::string>& filters, std::string 
     filter[i].name = filterlist[i].first.c_str();
     filter[i].spec = filterlist[i].second.c_str();
   }
-  filterlist.clear();
   nfdopendialogu8args_t args = {0};
   args.filterList = filter.data();
   args.filterCount = filterCount;
@@ -64,7 +63,6 @@ std::string SaveFileDialog(const std::vector<std::string>& filters, std::string 
     filter[i].name = filterlist[i].first.c_str();
     filter[i].spec = filterlist[i].second.c_str();
   }
-  filterlist.clear();
 	nfdsavedialogu8args_t args = {0};
 	args.filterList = filter.data();
 	args.filterCount = filterCount;

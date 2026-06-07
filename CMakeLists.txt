@@ -67,7 +67,7 @@ target_include_directories(EnTT INTERFACE
 FetchContent_Declare(
     imgui
     GIT_REPOSITORY https://github.com/ocornut/imgui.git
-    GIT_TAG v1.92.1
+    GIT_TAG v1.92.1-docking
 )
 
 FetchContent_GetProperties(imgui)

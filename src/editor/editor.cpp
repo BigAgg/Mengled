@@ -1,13 +1,13 @@
 #include "editor.h"
 #include "engine/gui_utilities.h"
 #include "engine/resourcemanager.h"
-#include "utils/logging.h"
+#include "filedialog.h"
 #include "themes.h"
-//#include "filedialog.h"
+#include "utils/logging.h"
 #include <filesystem>
-#include <rlImGui.h>
 #include <imgui.h>
 #include <misc/cpp/imgui_stdlib.h>
+#include <rlImGui.h>
 
 #define FILE_PROJECT_FILTER "Project file:mgd"
 #define FILE_PROJECT_FILTER_BIN "Project Binary:bin"
@@ -16,7 +16,7 @@
 
 namespace fs = std::filesystem;
 
-Editor::~Editor(){
+Editor::~Editor() {
   m_wm.clear();
   m_resManager.UnloadAll();
 }
@@ -24,8 +24,10 @@ Editor::~Editor(){
 void Editor::run() {
   if (!init())
     throw std::runtime_error("[Editor::run] Unable to initialize editor!");
-  if(!initImgui())
+  if (!initImgui())
     throw std::runtime_error("[Editor::run] Unable to initialize ImGui!");
+  logging::loginfo("[Editor::run] Mengled Editor %s initialized!",
+                   MENGLED_EDITOR_VERSION);
   loop();
 }
 
@@ -36,6 +38,13 @@ void Editor::loop() {
     ClearBackground(BLACK);
     rlImGuiBegin();
     taskbar();
+    docspacehost();
+    objectSelector();
+    objectEditor();
+    resourceEditor();
+    animationEditor();
+    sceneEditor();
+    scenePreview();
     rlImGuiEnd();
     m_wm.Draw();
     EndDrawing();
@@ -45,97 +54,201 @@ void Editor::loop() {
 bool Editor::init() {
   if (!initResourcemanager())
     return false;
+  std::string windowtitle = "Mengled Editor ";
+  windowtitle += MENGLED_EDITOR_VERSION;
+  SetWindowTitle(windowtitle.c_str());
   return true;
 }
 
-bool Editor::initResourcemanager() {
-  if (!m_resManager.LoadTexture("button", "textures/button.png"))
-    return false;
-  return true;
-}
+bool Editor::initResourcemanager() { return true; }
 
 bool Editor::initImgui() {
   rlImGuiSetup(false);
-	SetTheme(m_imguiSettings.theme);
-	ImGuiIO& io = ImGui::GetIO();
-	io.IniFilename = nullptr;
-	if (fs::exists("fonts/JetBrainsMonoNerdFont-Bold.ttf")) {
-		ImFont* font = io.Fonts->AddFontFromFileTTF("fonts/JetBrainsMonoNerdFont-Bold.ttf", 18.0f, nullptr, io.Fonts->GetGlyphRangesDefault());
-		if (font)
-			io.FontDefault = font;
-		else
-			logging::logwarning("[Editor::initImgui] Font could not be loaded: %s", "fonts/JetBrainsMonoNerdFont-Bold.ttf");
-	}
-	else {
-		logging::logwarning("[Editor::initImgui] Font file does not exist: %s", "fonts/JetBrainsMonoNerdFont-Bold.ttf");
-	}
+  SetTheme(m_imguiSettings.theme);
+  ImGuiIO &io = ImGui::GetIO();
+  io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+  io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
+  // io.IniFilename = nullptr;  // Disable ini file
+  if (fs::exists("fonts/JetBrainsMonoNerdFont-Bold.ttf")) {
+    ImFont *font = io.Fonts->AddFontFromFileTTF(
+        "fonts/JetBrainsMonoNerdFont-Bold.ttf", 18.0f, nullptr,
+        io.Fonts->GetGlyphRangesDefault());
+    if (font)
+      io.FontDefault = font;
+    else
+      logging::logwarning("[Editor::initImgui] Font could not be loaded: %s",
+                          "fonts/JetBrainsMonoNerdFont-Bold.ttf");
+  } else {
+    logging::logwarning("[Editor::initImgui] Font file does not exist: %s",
+                        "fonts/JetBrainsMonoNerdFont-Bold.ttf");
+  }
   return true;
 }
 
 void Editor::taskbar() {
-  if(ImGui::BeginMainMenuBar()){
+  if (ImGui::BeginMainMenuBar()) {
     // File handling
-    if(ImGui::BeginMenu("File")){
-      if(ImGui::MenuItem("New Project")){
-        //logging::loginfo("Selected folder: %s", OpenDirectoryDialog().c_str());
+    if (ImGui::BeginMenu("File")) {
+      if (ImGui::MenuItem("New Project")) {
+        logging::loginfo("Selected folder: %s", OpenDirectoryDialog().c_str());
       }
-      if(ImGui::MenuItem("Load Project")){
-        //logging::loginfo("Selected Project: %s", OpenFileDialog({FILE_PROJECT_FILTER, FILE_PROJECT_FILTER_BIN}).c_str());
+      if (ImGui::MenuItem("Load Project")) {
+        logging::loginfo(
+            "Selected Project: %s",
+            OpenFileDialog({FILE_PROJECT_FILTER, FILE_PROJECT_FILTER_BIN})
+                .c_str());
       }
-      if(ImGui::MenuItem("Save as")){
-        //logging::loginfo("Saving as: %s", SaveFileDialog({FILE_PROJECT_FILTER, FILE_PROJECT_FILTER_BIN}).c_str());
+      if (ImGui::MenuItem("Save as")) {
+        logging::loginfo(
+            "Saving as: %s",
+            SaveFileDialog({FILE_PROJECT_FILTER, FILE_PROJECT_FILTER_BIN})
+                .c_str());
       }
-      if(ImGui::MenuItem("Exit"))
+      if (ImGui::MenuItem("Exit"))
         m_close = true;
       ImGui::EndMenu();
     }
 
-    // Theme selection
-    if(ImGui::BeginMenu("Theme")){
-      if(ImGui::MenuItem("Default", nullptr, m_imguiSettings.theme == 0)){
-        m_imguiSettings.theme = Themes::DEFAULT;
-        SetTheme(m_imguiSettings.theme);
+    // Windows
+    if (ImGui::BeginMenu("Windows")) {
+      for (auto &wininfo : m_windows) {
+        ImGui::Checkbox(wininfo.first.c_str(), &wininfo.second);
       }
-      ImGui::SeparatorText("Light themes");
-      if(ImGui::MenuItem("Gold Light", nullptr, m_imguiSettings.theme == Themes::GOLD_LIGHT)){
-        m_imguiSettings.theme = Themes::GOLD_LIGHT;
-        SetTheme(m_imguiSettings.theme);
-      }
-      if(ImGui::MenuItem("Purple Light", nullptr, m_imguiSettings.theme == Themes::PURPLE_LIGHT)){
-        m_imguiSettings.theme = Themes::PURPLE_LIGHT;
-        SetTheme(m_imguiSettings.theme);
-      }
-      if(ImGui::MenuItem("Girly Pink", nullptr, m_imguiSettings.theme == Themes::GIRLY_PINK)){
-        m_imguiSettings.theme = Themes::GIRLY_PINK;
-        SetTheme(m_imguiSettings.theme);
-      }
-      if(ImGui::MenuItem("Noctua Light", nullptr, m_imguiSettings.theme == Themes::NOCTUA_LIGHT)){
-        m_imguiSettings.theme = Themes::NOCTUA_LIGHT;
-        SetTheme(m_imguiSettings.theme);
-      }
-      if(ImGui::MenuItem("RosePine Light", nullptr, m_imguiSettings.theme == Themes::ROSEPINE_LIGHT)){
-        m_imguiSettings.theme = Themes::ROSEPINE_LIGHT;
-        SetTheme(m_imguiSettings.theme);
-      }
-      ImGui::SeparatorText("Dark themes");
-      if(ImGui::MenuItem("Gold Dark", nullptr, m_imguiSettings.theme == Themes::GOLD_DARK)){
-        m_imguiSettings.theme = Themes::GOLD_DARK;
-        SetTheme(m_imguiSettings.theme);
-      }
-      if(ImGui::MenuItem("Purple Dark", nullptr, m_imguiSettings.theme == Themes::PURPLE_DARK)){
-        m_imguiSettings.theme = Themes::PURPLE_DARK;
-        SetTheme(m_imguiSettings.theme);
-      }
-      if(ImGui::MenuItem("Noctua Dark", nullptr, m_imguiSettings.theme == Themes::NOCTUA_DARK)){
-        m_imguiSettings.theme = Themes::NOCTUA_DARK;
-        SetTheme(m_imguiSettings.theme);
-      }
-      if(ImGui::MenuItem("RosePine Dark", nullptr, m_imguiSettings.theme == Themes::ROSEPINE_DARK)){
-        m_imguiSettings.theme = Themes::ROSEPINE_DARK;
-        SetTheme(m_imguiSettings.theme);
+      ImGui::EndMenu();
+    }
+
+    // Preferences
+    if (ImGui::BeginMenu("Preferences")) {
+      // Theme selection
+      if (ImGui::BeginMenu("Theme")) {
+        if (ImGui::MenuItem("Default", nullptr, m_imguiSettings.theme == 0)) {
+          m_imguiSettings.theme = Themes::DEFAULT;
+          SetTheme(m_imguiSettings.theme);
+        }
+        ImGui::SeparatorText("Light themes");
+        if (ImGui::MenuItem("Gold Light", nullptr,
+                            m_imguiSettings.theme == Themes::GOLD_LIGHT)) {
+          m_imguiSettings.theme = Themes::GOLD_LIGHT;
+          SetTheme(m_imguiSettings.theme);
+        }
+        if (ImGui::MenuItem("Purple Light", nullptr,
+                            m_imguiSettings.theme == Themes::PURPLE_LIGHT)) {
+          m_imguiSettings.theme = Themes::PURPLE_LIGHT;
+          SetTheme(m_imguiSettings.theme);
+        }
+        if (ImGui::MenuItem("Girly Pink", nullptr,
+                            m_imguiSettings.theme == Themes::GIRLY_PINK)) {
+          m_imguiSettings.theme = Themes::GIRLY_PINK;
+          SetTheme(m_imguiSettings.theme);
+        }
+        if (ImGui::MenuItem("Noctua Light", nullptr,
+                            m_imguiSettings.theme == Themes::NOCTUA_LIGHT)) {
+          m_imguiSettings.theme = Themes::NOCTUA_LIGHT;
+          SetTheme(m_imguiSettings.theme);
+        }
+        if (ImGui::MenuItem("RosePine Light", nullptr,
+                            m_imguiSettings.theme == Themes::ROSEPINE_LIGHT)) {
+          m_imguiSettings.theme = Themes::ROSEPINE_LIGHT;
+          SetTheme(m_imguiSettings.theme);
+        }
+        ImGui::SeparatorText("Dark themes");
+        if (ImGui::MenuItem("Gold Dark", nullptr,
+                            m_imguiSettings.theme == Themes::GOLD_DARK)) {
+          m_imguiSettings.theme = Themes::GOLD_DARK;
+          SetTheme(m_imguiSettings.theme);
+        }
+        if (ImGui::MenuItem("Purple Dark", nullptr,
+                            m_imguiSettings.theme == Themes::PURPLE_DARK)) {
+          m_imguiSettings.theme = Themes::PURPLE_DARK;
+          SetTheme(m_imguiSettings.theme);
+        }
+        if (ImGui::MenuItem("Noctua Dark", nullptr,
+                            m_imguiSettings.theme == Themes::NOCTUA_DARK)) {
+          m_imguiSettings.theme = Themes::NOCTUA_DARK;
+          SetTheme(m_imguiSettings.theme);
+        }
+        if (ImGui::MenuItem("RosePine Dark", nullptr,
+                            m_imguiSettings.theme == Themes::ROSEPINE_DARK)) {
+          m_imguiSettings.theme = Themes::ROSEPINE_DARK;
+          SetTheme(m_imguiSettings.theme);
+        }
+        ImGui::EndMenu();
       }
       ImGui::EndMenu();
     }
     ImGui::EndMainMenuBar();
   }
+}
+
+void Editor::docspacehost() {
+  ImGuiWindowFlags window_flags =
+      ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoTitleBar |
+      ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize |
+      ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoBringToFrontOnFocus |
+      ImGuiWindowFlags_NoNavFocus;
+
+  ImGuiViewport *viewport = ImGui::GetMainViewport();
+  ImGui::SetNextWindowPos(viewport->WorkPos);
+  ImGui::SetNextWindowSize(viewport->WorkSize);
+  ImGui::SetNextWindowViewport(viewport->ID);
+
+  ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
+  ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
+
+  ImGui::Begin("DockSpaceHost", nullptr, window_flags);
+  ImGui::PopStyleVar(2);
+
+  // Important: creates the docking node
+  ImGuiID dockspace_id = ImGui::GetID("MyDockSpace");
+  ImGui::DockSpace(dockspace_id, ImVec2(0, 0));
+
+  ImGui::End();
+}
+
+void Editor::objectSelector() {
+  if (!m_windows["Object Selector"])
+    return;
+  if (ImGui::Begin("Object Selector", &m_windows["Object Selector"])) {
+  }
+  ImGui::End();
+}
+
+void Editor::objectEditor() {
+  if (!m_windows["Object Editor"])
+    return;
+  if (ImGui::Begin("Object Editor", &m_windows["Object Editor"])) {
+  }
+  ImGui::End();
+}
+
+void Editor::resourceEditor() {
+  if (!m_windows["Resource Editor"])
+    return;
+  if (ImGui::Begin("Resource Editor", &m_windows["Resource Editor"])) {
+  }
+  ImGui::End();
+}
+
+void Editor::animationEditor() {
+  if (!m_windows["Animation Editor"])
+    return;
+  if (ImGui::Begin("Animation Editor", &m_windows["Animation Editor"])) {
+  }
+  ImGui::End();
+}
+
+void Editor::sceneEditor() {
+  if (!m_windows["Scene Editor"])
+    return;
+  if (ImGui::Begin("Scene Editor", &m_windows["Scene Editor"])) {
+  }
+  ImGui::End();
+}
+
+void Editor::scenePreview() {
+  if (!m_windows["Scene Preview"])
+    return;
+  if (ImGui::Begin("Scene Preview", &m_windows["Scene Preview"])) {
+  }
+  ImGui::End();
 }
