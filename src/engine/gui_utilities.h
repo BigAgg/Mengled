@@ -1,7 +1,6 @@
 #pragma once
 
 #include <algorithm>
-#include <concepts>
 #include <raylib.h>
 #include <functional>
 #include <string>
@@ -72,11 +71,11 @@ public:
 	void SetText(const std::string& text);
 
 private:
-	Rectangle bounds;
-	Rectangle trect;
-	Texture texture;
-	std::string label;
-	Callback callback;
+	Texture texture = {};
+	Rectangle bounds = {0, 0,0 ,0};
+	std::string label = "";
+	Rectangle trect = {0, 0, 0, 0};
+	Callback callback = {};
 	bool hovered = false;
 	bool pressed = false;
 };
@@ -102,13 +101,13 @@ class ComboBox : public Widget {
     bool Selecting() const;
 
   private:
-    Rectangle bounds;
-    Rectangle trect;
+    std::string label;
     Texture texture;
+    Rectangle bounds;
     std::vector<std::string> options;
     int selectedIndex = -1;
-    std::string label;
     Callback callback;
+    Rectangle trect;
     bool hovered = false;
     bool pressed = false;
     bool selecting = false;
@@ -129,14 +128,14 @@ public:
 	void SetText(const std::string& text);
 
 private:
-	Rectangle bounds;
-	Rectangle trect;
 	Texture texture;
 	std::string label;
+	bool *val = nullptr;
 	Callback callback;
+	Rectangle bounds;
+	Rectangle trect;
 	bool hovered = false;
 	bool pressed = false;
-	bool *val = nullptr;
 };
 
 class InputInt : public Widget {
@@ -154,18 +153,18 @@ public:
 	void SetText(const std::string& text);
 	
 private:
-	Rectangle bounds;
-	Rectangle trect;
 	Texture texture;
+	Rectangle bounds;
 	std::string label;
-	Callback callback;
-	bool hovered = false;
-	bool pressed = false;
 	int* val = nullptr;
 	int step;
 	int stepshift;
+	Callback callback;
+	Rectangle trect;
 	Button stepPlus;
 	Button stepMinus;
+	bool hovered = false;
+	bool pressed = false;
 	std::string valStr;
 };
 
@@ -189,18 +188,18 @@ public:
 	std::string FormatValue() const;
 
 private:
-	Rectangle bounds;
-	Rectangle trect;
 	Texture texture;
+	Rectangle bounds;
 	std::string label;
-	Callback callback;
-	bool hovered = false;
-	bool pressed = false;
 	double* val = nullptr;
 	double step;
 	double stepshift;
+	Callback callback;
+	Rectangle trect;
 	Button stepPlus;
 	Button stepMinus;
+	bool hovered = false;
+	bool pressed = false;
 	std::string valStr;
 	std::string formatStr = "%.2f";
 };
@@ -226,15 +225,15 @@ public:
 
 	void SetText(const std::string& text);
 private:
-	Rectangle bounds;
-	Rectangle trect;
 	Texture texture;
+	Rectangle bounds;
 	std::string label;
+	std::string* val = nullptr;
+	size_t limit;
 	Callback callback;
+	Rectangle trect;
 	bool hovered = false;
 	bool pressed = false;
-	size_t limit;
-	std::string* val = nullptr;
 	std::string inputStr;
 };
 
@@ -385,7 +384,7 @@ public:
   }
 
   void EnableSingleWindow(const std::string& name){
-    size_t index = -1;
+    int index = -1;
     for(size_t i = 0; i < windows.size(); i++){
       if(windows[i]->GetName() == name){
         index = i;

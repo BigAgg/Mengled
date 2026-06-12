@@ -85,8 +85,6 @@ bool Editor::init() {
 
 bool Editor::initResourcemanager() { 
   m_sm.LoadScene("");
-  auto scene = m_sm.GetCurrentScene();
-  auto entity = scene->CreateEntity("Global");
   return true; 
 }
 

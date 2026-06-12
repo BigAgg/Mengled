@@ -4,7 +4,6 @@
 #define FONT_SIZE 20
 #endif
 
-#include "utils/logging.h"
 #include <cstdio>
 #include <imgui.h>
 
@@ -47,7 +46,7 @@ void Button::Draw() const {
 
   DrawText(label.c_str(),
            static_cast<int>(bounds.x + (bounds.width - textWidth) / 2),
-           static_cast<int>(bounds.y + bounds.height / 2 - FONT_SIZE / 2),
+           static_cast<int>(bounds.y + bounds.height / 2 - (float)FONT_SIZE / 2),
            FONT_SIZE, WHITE);
 }
 
@@ -115,17 +114,17 @@ void ComboBox::Draw() const {
 
   DrawTexturePro(texture, trect, bounds, {0, 0}, 0.0f, color);
   DrawText(label.c_str(), static_cast<int>(bounds.x + bounds.width + 5),
-           static_cast<int>(bounds.y + bounds.height / 2 - FONT_SIZE / 2),
+           static_cast<int>(bounds.y + bounds.height / 2 - (float)FONT_SIZE / 2),
            FONT_SIZE, WHITE);
 
-  std::string displayText = selectedIndex >= 0 && selectedIndex < options.size()
+  std::string displayText = selectedIndex >= 0 && selectedIndex < (int)options.size()
                                 ? options[selectedIndex]
                                 : "Select";
-  int textWidth = MeasureText(displayText.c_str(), FONT_SIZE);
+  int textWidth = MeasureText(displayText.c_str(), (float)FONT_SIZE);
 
   DrawText(displayText.c_str(),
            static_cast<int>(bounds.x + (bounds.width - textWidth) / 2),
-           static_cast<int>(bounds.y + bounds.height / 2 - FONT_SIZE / 2),
+           static_cast<int>(bounds.y + bounds.height / 2 - (float)FONT_SIZE / 2),
            FONT_SIZE, WHITE);
 
   if (selecting) {
@@ -133,14 +132,14 @@ void ComboBox::Draw() const {
       Rectangle optionRect = {bounds.x, bounds.y + bounds.height * (i + 1),
                               bounds.width, bounds.height};
       DrawTexturePro(texture, trect, optionRect, {0, 0}, 0.0f,
-                     i == selectedIndex ? GRAY : ORANGE);
+                     i == (size_t)selectedIndex ? GRAY : ORANGE);
       DrawText(options[i].c_str(),
                static_cast<int>(optionRect.x +
                                 (optionRect.width -
                                  MeasureText(options[i].c_str(), FONT_SIZE)) /
                                     2),
                static_cast<int>(optionRect.y + optionRect.height / 2 -
-                                FONT_SIZE / 2),
+                                (float)FONT_SIZE / 2),
                FONT_SIZE, WHITE);
     }
   }
@@ -163,7 +162,7 @@ void ComboBox::SetSize(float width, float height) {
 }
 
 void ComboBox::SetText(const std::string &text) {
-  if (selectedIndex >= 0 && selectedIndex < options.size())
+  if (selectedIndex >= 0 && (size_t)selectedIndex < options.size())
     options[selectedIndex] = text;
 }
 
@@ -173,14 +172,14 @@ bool ComboBox::Selecting() const { return selecting; }
 
 void ComboBox::SetOptions(const std::vector<std::string> &newOptions) {
   options = newOptions;
-  if (selectedIndex >= options.size())
+  if ((size_t)selectedIndex >= options.size())
     selectedIndex = -1;
 }
 
 std::vector<std::string> ComboBox::GetOptions() { return options; }
 
 void ComboBox::SetSelectedIndex(int index) {
-  if (index >= 0 && index < options.size())
+  if (index >= 0 && (size_t)index < options.size())
     selectedIndex = index;
 }
 
@@ -293,7 +292,7 @@ std::string UIManager::GetName() const { return name; }
 void UIManager::m_DrawTitlebar() {
   DrawRectangleRec({0, 0, window.width, style.titlebarHeight}, style.accent);
   DrawText(name.c_str(), static_cast<int>(style.spacing),
-           static_cast<int>(style.titlebarHeight / 2 - style.fontSize / 2),
+           static_cast<int>(style.titlebarHeight / 2 - (float)style.fontSize / 2),
            style.fontSize, WHITE);
   DrawLineEx({0, style.titlebarHeight}, {window.width, style.titlebarHeight},
              style.borderSize, style.borderColor);
@@ -497,14 +496,14 @@ void InputInt::Draw() const {
 
   DrawText(valstr.c_str(),
            static_cast<int>(bounds.x + (bounds.width - textWidth) / 2),
-           static_cast<int>(bounds.y + bounds.height / 2 - FONT_SIZE / 2),
+           static_cast<int>(bounds.y + bounds.height / 2 - (float)FONT_SIZE / 2),
            FONT_SIZE, WHITE);
   const Rectangle b = GetBounds();
   DrawText(
       label.c_str(),
       static_cast<int>(b.x + b.width -
                        MeasureText(label.data(), static_cast<int>(FONT_SIZE))),
-      static_cast<int>(b.y + bounds.height / 2 - FONT_SIZE / 2), FONT_SIZE,
+      static_cast<int>(b.y + bounds.height / 2 - (float)FONT_SIZE / 2), FONT_SIZE,
       WHITE);
 }
 
@@ -513,7 +512,7 @@ Rectangle InputInt::GetBounds() const {
   Rectangle smb = stepMinus.GetBounds();
   return {bounds.x, bounds.y,
           bounds.width + 10 + spb.width + smb.width + 5 +
-              MeasureText(label.data(), static_cast<int>(FONT_SIZE))};
+              MeasureText(label.data(), static_cast<int>(FONT_SIZE)), bounds.height};
 }
 
 void InputInt::SetPosition(float x, float y) {
@@ -626,14 +625,14 @@ void InputDouble::Draw() const {
 
   DrawText(valstr.c_str(),
            static_cast<int>(bounds.x + (bounds.width - textWidth) / 2),
-           static_cast<int>(bounds.y + bounds.height / 2 - FONT_SIZE / 2),
+           static_cast<int>(bounds.y + bounds.height / 2 - (float)FONT_SIZE / 2),
            FONT_SIZE, WHITE);
   const Rectangle b = GetBounds();
   DrawText(
       label.c_str(),
       static_cast<int>(b.x + b.width -
                        MeasureText(label.data(), static_cast<int>(FONT_SIZE))),
-      static_cast<int>(b.y + bounds.height / 2 - FONT_SIZE / 2), FONT_SIZE,
+      static_cast<int>(b.y + bounds.height / 2 - (float)FONT_SIZE / 2), FONT_SIZE,
       WHITE);
 }
 
@@ -642,7 +641,7 @@ Rectangle InputDouble::GetBounds() const {
   Rectangle smb = stepMinus.GetBounds();
   return {bounds.x, bounds.y,
           bounds.width + 10 + spb.width + smb.width + 5 +
-              MeasureText(label.data(), static_cast<int>(FONT_SIZE))};
+              MeasureText(label.data(), static_cast<int>(FONT_SIZE)), bounds.height};
 }
 
 void InputDouble::SetPosition(float x, float y) {
@@ -725,14 +724,14 @@ void InputString::Draw() const {
 
   DrawText(displayStr.c_str(),
            static_cast<int>(bounds.x + (bounds.width - textWidth) / 2),
-           static_cast<int>(bounds.y + bounds.height / 2 - FONT_SIZE / 2),
+           static_cast<int>(bounds.y + bounds.height / 2 - (float)FONT_SIZE / 2),
            FONT_SIZE, WHITE);
   const Rectangle b = GetBounds();
   DrawText(
       label.c_str(),
       static_cast<int>(b.x + b.width -
                        MeasureText(label.data(), static_cast<int>(FONT_SIZE))),
-      static_cast<int>(b.y + bounds.height / 2 - FONT_SIZE / 2), FONT_SIZE,
+      static_cast<int>(b.y + bounds.height / 2 - (float)FONT_SIZE / 2), FONT_SIZE,
       WHITE);
 }
 
