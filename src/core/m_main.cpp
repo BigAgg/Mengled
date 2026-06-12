@@ -1,5 +1,6 @@
 #include "m_main.h"
 #include "engine/gui_utilities.h"
+#include "engine/engine.h"
 #include "utils/logging.h"
 #include "utils/timer.h"
 #include <filesystem>
@@ -45,6 +46,7 @@ int m_main(int argc, char *argv[]) {
 #define SETTINGS_BIN "settings.bin"
 
 void Mengled::run() {
+  tests();
   loadSettings();
   if (!initRaylib())
     throw std::runtime_error("[Mengled::run] Unable to initialize raylib!");
@@ -302,4 +304,8 @@ void Mengled::cleanup() {
   CloseAudioDevice();
   m_wm.clear();
   m_resManager.UnloadAll();
+}
+
+void Mengled::tests(){
+  TestEngine();
 }

@@ -2,6 +2,7 @@
 
 #include "engine/gui_utilities.h"
 #include "engine/resourcemanager.h"
+#include "engine/engine.h"
 #include <map>
 #include <string>
 
@@ -40,4 +41,7 @@ private:
   struct {
     unsigned int theme = 0;
   } m_imguiSettings;
+
+  // Engine handling
+  SceneManager m_sm;
 };

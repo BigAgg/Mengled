@@ -1,4 +1,6 @@
 #include "editor.h"
+#include "engine/components.h"
+#include "engine/engine.h"
 #include "engine/gui_utilities.h"
 #include "engine/resourcemanager.h"
 #include "filedialog.h"
@@ -15,6 +17,27 @@
 #define FILE_SOUND_FILTER "Sound file:mp3"
 
 namespace fs = std::filesystem;
+
+// Helper functions for drawing
+void DrawEntityNode(Scene* scene, Entity entity){
+  auto& name = entity.GetComponent<NameComponent>();
+  ImGui::PushID(entity);
+  if(ImGui::TreeNode(
+    (void*)(uint64_t)entity.GetComponent<IDComponent>().ID,
+    "%s",
+    name.name.c_str()
+  )){
+    auto& rel = entity.GetComponent<RelationshipComponent>();
+
+    for(auto childID : rel.children){
+      Entity child = scene->GetEntityByUUID(childID);
+      if(child)
+        DrawEntityNode(scene, child);
+    }
+    ImGui::TreePop();
+  }
+  ImGui::PopID();
+}
 
 Editor::~Editor() {
   m_wm.clear();
@@ -60,7 +83,12 @@ bool Editor::init() {
   return true;
 }
 
-bool Editor::initResourcemanager() { return true; }
+bool Editor::initResourcemanager() { 
+  m_sm.LoadScene("");
+  auto scene = m_sm.GetCurrentScene();
+  auto entity = scene->CreateEntity("Global");
+  return true; 
+}
 
 bool Editor::initImgui() {
   rlImGuiSetup(false);
@@ -209,6 +237,9 @@ void Editor::objectSelector() {
   if (!m_windows["Object Selector"])
     return;
   if (ImGui::Begin("Object Selector", &m_windows["Object Selector"])) {
+    auto scene = m_sm.GetCurrentScene();
+    for(auto root : scene->GetRootEntities())
+      DrawEntityNode(scene, root);
   }
   ImGui::End();
 }

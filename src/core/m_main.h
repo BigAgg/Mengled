@@ -34,6 +34,9 @@ private:
 
   void cleanup();
 
+  // Run tests
+  void tests();
+
   struct {
     int w, h, fps, device, posx, posy;
     bool borderless, vsync, maximized;
