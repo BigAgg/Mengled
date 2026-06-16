@@ -1,20 +1,56 @@
 #pragma once
 
-#include <cstdint>
-#include <string>
-#include <entt/entt.hpp>
-#include <unordered_map>
 #include "components.h"
+#include <cstdint>
+#include <entt/entt.hpp>
+#include <nlohmann/json.hpp>
+#include <string>
+#include <unordered_map>
 
+using json = nlohmann::json;
+
+// Predefinitions
 class Entity;
 
-class Scene{
-  public:
+struct ComponentRegistration {
+  std::string name;
+
+  std::function<bool(Entity)> HasComponent;
+  std::function<void(Entity)> AddComponent;
+  std::function<void(Entity)> RemoveComponent;
+  std::function<void(Entity, json&)> Serialize;
+  std::function<void(Entity, const json&)> Deserialize;
+};
+
+class ComponentRegistry {
+public:
+  static ComponentRegistry& Get();
+  const std::unordered_map<std::string, ComponentRegistration>& GetComponents() const;
+  const ComponentRegistration* FindByName(const std::string& name);
+
+  template <typename T>
+  void RegisterComponent(const std::string& name, auto serializeFn, auto deserializeFn);
+
+private:
+  std::unordered_map<std::string, ComponentRegistration> m_components;
+};
+
+/*
+Scene:
+  - holds world registry
+  - entity map for fast lookup
+  - if it is a 2D scene or 3D
+  - Creating new entities
+  - Setting hirarchy with parents and childs
+*/
+class Scene {
+public:
   Scene() = default;
   Scene(bool twoD);
 
   Entity CreateEntity();
   Entity CreateEntity(const std::string& name);
+  Entity CreateEntity(UUID uuid, const std::string& name);
 
   Entity GetEntityByUUID(UUID id);
 
@@ -22,66 +58,97 @@ class Scene{
   void RemoveParent(Entity child);
   std::vector<Entity> GetRootEntities();
 
-  void Update(float dt);
+  std::unordered_map<uint64_t, entt::entity>* GetMap() { return &m_entityMap; }
 
-  private:
+  Matrix GetWorldTransform(Entity entity);
+
+  void Update(float dt);
+  void Clear();
+
+private:
   std::unordered_map<uint64_t, entt::entity> m_entityMap;
   bool m_twoD = false;
-  
-  public:
+
+public:
   entt::registry registry;
 };
 
-class Entity{
-  public:
+/*
+Entity:
+  - Holds the scene it belongs to
+  - adding components
+  - getting components
+  - check if contains component
+*/
+class Entity {
+public:
   Entity() = default;
   Entity(entt::entity handle, Scene* scene);
 
-  template<typename T, typename... Args>
-  T& AddComponent(Args&&... args){
+  template <typename T, typename... Args> T& AddComponent(Args&&... args) {
     return m_scene->registry.emplace<T>(m_handle, std::forward<Args>(args)...);
   }
 
-  template<typename T>
-  T& GetComponent(){
-    return m_scene->registry.get<T>(m_handle);
-  }
+  template <typename T> T& GetComponent() { return m_scene->registry.get<T>(m_handle); }
 
-  template<typename T>
-  bool HasComponent() const{
-    return m_scene->registry.all_of<T>(m_handle);
-  }
+  template <typename T> bool HasComponent() const { return m_scene->registry.all_of<T>(m_handle); }
+  template <typename T> void RemoveComponent() const { m_scene->registry.remove<T>(m_handle); }
 
-  operator bool() const{
-    return m_handle != entt::null;
-  }
+  operator bool() const { return m_handle != entt::null; }
 
-  private:
+private:
   entt::entity m_handle = entt::null;
   Scene* m_scene = nullptr;
 };
 
-class SceneManager{
-  private:
+/*
+SceneManager:
+  - Scene loading
+  - Scene saving
+  - Changing scenes
+*/
+class SceneManager {
+private:
   std::unique_ptr<Scene> m_currentScene;
-  public:
+
+public:
   void LoadScene(const std::string& path);
   Scene* GetCurrentScene();
 };
 
-class GlobalGameState{
+/*
+GlobalGameState:
+  - Used later on
+  - Set triggers to evaluate each frame
+*/
+class GlobalGameState {};
+
+/*
+SceneSerializer:
+  - load single scene
+  - save single scene
+*/
+class SceneSerializer {
+public:
+  SceneSerializer(Scene* scene);
+
+  bool Serialize(const std::string& filepath);
+  bool Deserialize(const std::string& filepath);
+
+private:
+  Scene* m_scene;
 };
 
-class SceneSerializer{
-  public:
-  static void Save(Scene& scene, const std::string& path);
-  static void Load(Scene& scene, const std::string& path);
-};
+class Engine {
+public:
+  void init();
 
-class Engine{
-  public:
-  SceneManager Scenes;
-  GlobalGameState GlobalState;
+private:
+  void RegisterEngineComponents();
+
+public:
+  SceneManager sceneManager;
+  GlobalGameState globalState;
 };
 
 void TestEngine();

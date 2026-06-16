@@ -15,23 +15,24 @@
 #define FILE_PROJECT_FILTER_BIN "Project Binary:bin"
 #define FILE_PICTURE_FILTER "Picture:png,jpg,jpeg"
 #define FILE_SOUND_FILTER "Sound file:mp3"
+#define FILE_SCENE_FILTER "Scene:json,scn"
 
 namespace fs = std::filesystem;
 
 // Helper functions for drawing
-void DrawEntityNode(Scene* scene, Entity entity){
+void DrawEntityNode(Scene* scene, Entity entity) {
   auto& name = entity.GetComponent<NameComponent>();
   ImGui::PushID(entity);
-  if(ImGui::TreeNode(
-    (void*)(uint64_t)entity.GetComponent<IDComponent>().ID,
-    "%s",
-    name.name.c_str()
-  )){
+  if (ImGui::TreeNode((void*)(uint64_t)entity.GetComponent<IDComponent>().ID, "%s",
+                      name.name.c_str())) {
     auto& rel = entity.GetComponent<RelationshipComponent>();
-
-    for(auto childID : rel.children){
+    if (ImGui::Button("New Child")) {
+      auto c = scene->CreateEntity();
+      scene->SetParent(c, entity);
+    }
+    for (auto childID : rel.children) {
       Entity child = scene->GetEntityByUUID(childID);
-      if(child)
+      if (child)
         DrawEntityNode(scene, child);
     }
     ImGui::TreePop();
@@ -49,8 +50,7 @@ void Editor::run() {
     throw std::runtime_error("[Editor::run] Unable to initialize editor!");
   if (!initImgui())
     throw std::runtime_error("[Editor::run] Unable to initialize ImGui!");
-  logging::loginfo("[Editor::run] Mengled Editor %s initialized!",
-                   MENGLED_EDITOR_VERSION);
+  logging::loginfo("[Editor::run] Mengled Editor %s initialized!", MENGLED_EDITOR_VERSION);
   loop();
 }
 
@@ -83,22 +83,22 @@ bool Editor::init() {
   return true;
 }
 
-bool Editor::initResourcemanager() { 
-  m_sm.LoadScene("");
-  return true; 
+bool Editor::initResourcemanager() {
+  m_engine.init();
+
+  return true;
 }
 
 bool Editor::initImgui() {
   rlImGuiSetup(false);
   SetTheme(m_imguiSettings.theme);
-  ImGuiIO &io = ImGui::GetIO();
+  ImGuiIO& io = ImGui::GetIO();
   io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
   io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
   // io.IniFilename = nullptr;  // Disable ini file
   if (fs::exists("fonts/JetBrainsMonoNerdFont-Bold.ttf")) {
-    ImFont *font = io.Fonts->AddFontFromFileTTF(
-        "fonts/JetBrainsMonoNerdFont-Bold.ttf", 18.0f, nullptr,
-        io.Fonts->GetGlyphRangesDefault());
+    ImFont* font = io.Fonts->AddFontFromFileTTF("fonts/JetBrainsMonoNerdFont-Bold.ttf", 18.0f,
+                                                nullptr, io.Fonts->GetGlyphRangesDefault());
     if (font)
       io.FontDefault = font;
     else
@@ -119,16 +119,16 @@ void Editor::taskbar() {
         logging::loginfo("Selected folder: %s", OpenDirectoryDialog().c_str());
       }
       if (ImGui::MenuItem("Load Project")) {
-        logging::loginfo(
-            "Selected Project: %s",
-            OpenFileDialog({FILE_PROJECT_FILTER, FILE_PROJECT_FILTER_BIN})
-                .c_str());
+        auto ss = SceneSerializer(m_engine.sceneManager.GetCurrentScene());
+        const std::string& path = OpenFileDialog({FILE_SCENE_FILTER});
+        if (!path.empty())
+          ss.Deserialize(path);
       }
       if (ImGui::MenuItem("Save as")) {
-        logging::loginfo(
-            "Saving as: %s",
-            SaveFileDialog({FILE_PROJECT_FILTER, FILE_PROJECT_FILTER_BIN})
-                .c_str());
+        auto ss = SceneSerializer(m_engine.sceneManager.GetCurrentScene());
+        const std::string& path = SaveFileDialog({FILE_SCENE_FILTER});
+        if (!path.empty())
+          ss.Serialize(path);
       }
       if (ImGui::MenuItem("Exit"))
         m_close = true;
@@ -137,7 +137,7 @@ void Editor::taskbar() {
 
     // Windows
     if (ImGui::BeginMenu("Windows")) {
-      for (auto &wininfo : m_windows) {
+      for (auto& wininfo : m_windows) {
         ImGui::Checkbox(wininfo.first.c_str(), &wininfo.second);
       }
       ImGui::EndMenu();
@@ -152,8 +152,7 @@ void Editor::taskbar() {
           SetTheme(m_imguiSettings.theme);
         }
         ImGui::SeparatorText("Light themes");
-        if (ImGui::MenuItem("Gold Light", nullptr,
-                            m_imguiSettings.theme == Themes::GOLD_LIGHT)) {
+        if (ImGui::MenuItem("Gold Light", nullptr, m_imguiSettings.theme == Themes::GOLD_LIGHT)) {
           m_imguiSettings.theme = Themes::GOLD_LIGHT;
           SetTheme(m_imguiSettings.theme);
         }
@@ -162,8 +161,7 @@ void Editor::taskbar() {
           m_imguiSettings.theme = Themes::PURPLE_LIGHT;
           SetTheme(m_imguiSettings.theme);
         }
-        if (ImGui::MenuItem("Girly Pink", nullptr,
-                            m_imguiSettings.theme == Themes::GIRLY_PINK)) {
+        if (ImGui::MenuItem("Girly Pink", nullptr, m_imguiSettings.theme == Themes::GIRLY_PINK)) {
           m_imguiSettings.theme = Themes::GIRLY_PINK;
           SetTheme(m_imguiSettings.theme);
         }
@@ -178,18 +176,15 @@ void Editor::taskbar() {
           SetTheme(m_imguiSettings.theme);
         }
         ImGui::SeparatorText("Dark themes");
-        if (ImGui::MenuItem("Gold Dark", nullptr,
-                            m_imguiSettings.theme == Themes::GOLD_DARK)) {
+        if (ImGui::MenuItem("Gold Dark", nullptr, m_imguiSettings.theme == Themes::GOLD_DARK)) {
           m_imguiSettings.theme = Themes::GOLD_DARK;
           SetTheme(m_imguiSettings.theme);
         }
-        if (ImGui::MenuItem("Purple Dark", nullptr,
-                            m_imguiSettings.theme == Themes::PURPLE_DARK)) {
+        if (ImGui::MenuItem("Purple Dark", nullptr, m_imguiSettings.theme == Themes::PURPLE_DARK)) {
           m_imguiSettings.theme = Themes::PURPLE_DARK;
           SetTheme(m_imguiSettings.theme);
         }
-        if (ImGui::MenuItem("Noctua Dark", nullptr,
-                            m_imguiSettings.theme == Themes::NOCTUA_DARK)) {
+        if (ImGui::MenuItem("Noctua Dark", nullptr, m_imguiSettings.theme == Themes::NOCTUA_DARK)) {
           m_imguiSettings.theme = Themes::NOCTUA_DARK;
           SetTheme(m_imguiSettings.theme);
         }
@@ -207,13 +202,12 @@ void Editor::taskbar() {
 }
 
 void Editor::docspacehost() {
-  ImGuiWindowFlags window_flags =
-      ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoTitleBar |
-      ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize |
-      ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoBringToFrontOnFocus |
-      ImGuiWindowFlags_NoNavFocus;
+  ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoTitleBar |
+                                  ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize |
+                                  ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoBringToFrontOnFocus |
+                                  ImGuiWindowFlags_NoNavFocus;
 
-  ImGuiViewport *viewport = ImGui::GetMainViewport();
+  ImGuiViewport* viewport = ImGui::GetMainViewport();
   ImGui::SetNextWindowPos(viewport->WorkPos);
   ImGui::SetNextWindowSize(viewport->WorkSize);
   ImGui::SetNextWindowViewport(viewport->ID);
@@ -235,8 +229,11 @@ void Editor::objectSelector() {
   if (!m_windows["Object Selector"])
     return;
   if (ImGui::Begin("Object Selector", &m_windows["Object Selector"])) {
-    auto scene = m_sm.GetCurrentScene();
-    for(auto root : scene->GetRootEntities())
+    auto scene = m_engine.sceneManager.GetCurrentScene();
+    if (ImGui::Button("New Entity")) {
+      scene->CreateEntity();
+    }
+    for (auto root : scene->GetRootEntities())
       DrawEntityNode(scene, root);
   }
   ImGui::End();

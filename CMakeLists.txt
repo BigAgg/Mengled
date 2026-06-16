@@ -23,6 +23,20 @@ endif()
 include(FetchContent)
 
 # --------------------------------------------------------------------------------------
+# nlohmann_json
+# --------------------------------------------------------------------------------------
+
+set(JSON_BuildTests OFF CACHE INTERNAL "")
+
+FetchContent_Declare(
+  json
+  GIT_REPOSITORY https://github.com/nlohmann/json.git
+  GIT_TAG v3.12.0
+)
+
+FetchContent_MakeAvailable(json)
+
+# --------------------------------------------------------------------------------------
 # Raylib
 # --------------------------------------------------------------------------------------
 
@@ -159,6 +173,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     rlImGui
     nfd
     EnTT::EnTT
+    nlohmann_json::nlohmann_json
 )
 
 if(UNIX AND NOT APPLE)

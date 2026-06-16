@@ -1,8 +1,8 @@
 #pragma once
 
+#include "engine/engine.h"
 #include "engine/gui_utilities.h"
 #include "engine/resourcemanager.h"
-#include "engine/engine.h"
 #include <map>
 #include <string>
 
@@ -34,14 +34,13 @@ private:
   bool m_close = false;
   ResourceManager m_resManager;
   WindowManager m_wm;
-  std::map<std::string, bool> m_windows = {
-      {"Object Selector", true}, {"Object Editor", true},
-      {"Resource Editor", true}, {"Animation Editor", false},
-      {"Scene Editor", true},    {"Scene Preview", true}};
+  std::map<std::string, bool> m_windows = {{"Object Selector", true}, {"Object Editor", true},
+                                           {"Resource Editor", true}, {"Animation Editor", false},
+                                           {"Scene Editor", true},    {"Scene Preview", true}};
   struct {
     unsigned int theme = 0;
   } m_imguiSettings;
 
   // Engine handling
-  SceneManager m_sm;
+  Engine m_engine;
 };
