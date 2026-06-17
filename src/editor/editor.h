@@ -21,6 +21,11 @@ private:
   bool initResourcemanager();
   bool initImgui();
 
+  bool loadSettings();
+  bool saveSettings();
+
+  void cleanup();
+
   // Imgui windows
   void taskbar();
   void docspacehost();

@@ -1,6 +1,5 @@
 #pragma once
 #include "UUID.h"
-#include <cstdint>
 #include <raylib.h>
 #include <string>
 #include <vector>
@@ -14,14 +13,14 @@ struct IDComponent {
 };
 
 struct TagComponent {
-  std::string tag;
+  std::string tag = "";
 
   TagComponent() = default;
   TagComponent(const std::string& tag) : tag(tag) {}
 };
 
 struct NameComponent {
-  std::string name;
+  std::string name = "";
 
   NameComponent() = default;
   NameComponent(const std::string& name) : name(name) {}
@@ -33,27 +32,28 @@ struct RelationshipComponent {
 };
 
 // Object structs
-struct TransformComponent2D {
+struct Transform2D {
   Vector2 position = {0.0f, 0.0f};
   float rotation = 0.0f;
   Vector2 scale = {1.0f, 1.0f};
 };
 
-struct TransformComponent3D {
+struct Transform3D {
   Vector3 position = {0.0f, 0.0f, 0.0f};
   Vector3 rotation = {0.0f, 0.0f, 0.0f};
   Vector3 scale = {1.0f, 1.0f, 1.0f};
 };
 
-struct VelocityComponent {
-  float vel;
+struct Gravity {
+  Vector3 force = {0, 0, 0};
 };
 
-struct SpeedComponent {
-  float speed;
+struct RigidBody {
+  Vector3 velocity = {0, 0, 0};
+  Vector3 acceleration = {0, 0, 0};
 };
 
 // Request system
 struct ChangeSceneRequest {
-  std::string scenePath;
+  std::string scenePath = "";
 };

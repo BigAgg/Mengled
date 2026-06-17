@@ -7,9 +7,13 @@
 #include "themes.h"
 #include "utils/logging.h"
 #include <filesystem>
+#include <fstream>
 #include <imgui.h>
 #include <misc/cpp/imgui_stdlib.h>
 #include <rlImGui.h>
+
+#define EDITOR_WORKING_DIR "editor/"
+#define EDITOR_SETTINGS_FILE EDITOR_WORKING_DIR "settings.bin"
 
 #define FILE_PROJECT_FILTER "Project file:mgd"
 #define FILE_PROJECT_FILTER_BIN "Project Binary:bin"
@@ -20,6 +24,31 @@
 namespace fs = std::filesystem;
 
 // Helper functions for drawing
+void DrawComponentsNode(Scene* scene, Entity entity) {}
+
+void DrawNewEntityCreation(Scene* scene, Entity entity = Entity()) {
+  static std::string name;
+  ImGui::InputText("Name", &name);
+  if (ImGui::Button("Cancel")) {
+    name.clear();
+    ImGui::CloseCurrentPopup();
+  }
+  if (name.empty())
+    ImGui::BeginDisabled();
+  ImGui::SameLine();
+  if (!ImGui::Button("Create")) {
+    if (name.empty())
+      ImGui::EndDisabled();
+    return;
+  }
+  ImGui::CloseCurrentPopup();
+  auto c = scene->CreateEntity(name);
+  name.clear();
+  if (entity) {
+    scene->SetParent(c, entity);
+  }
+}
+
 void DrawEntityNode(Scene* scene, Entity entity) {
   auto& name = entity.GetComponent<NameComponent>();
   ImGui::PushID(entity);
@@ -27,9 +56,16 @@ void DrawEntityNode(Scene* scene, Entity entity) {
                       name.name.c_str())) {
     auto& rel = entity.GetComponent<RelationshipComponent>();
     if (ImGui::Button("New Child")) {
-      auto c = scene->CreateEntity();
-      scene->SetParent(c, entity);
+      ImGui::OpenPopup("New Child");
     }
+    if (ImGui::BeginPopupModal("New Child", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+      DrawNewEntityCreation(scene, entity);
+      ImGui::EndPopup();
+    }
+    if (ImGui::SameLine(), ImGui::Button("Delete")) {
+      scene->DestroyEntity(entity);
+    }
+    DrawComponentsNode(scene, entity);
     for (auto childID : rel.children) {
       Entity child = scene->GetEntityByUUID(childID);
       if (child)
@@ -52,6 +88,7 @@ void Editor::run() {
     throw std::runtime_error("[Editor::run] Unable to initialize ImGui!");
   logging::loginfo("[Editor::run] Mengled Editor %s initialized!", MENGLED_EDITOR_VERSION);
   loop();
+  cleanup();
 }
 
 void Editor::loop() {
@@ -77,6 +114,7 @@ void Editor::loop() {
 bool Editor::init() {
   if (!initResourcemanager())
     return false;
+  loadSettings();
   std::string windowtitle = "Mengled Editor ";
   windowtitle += MENGLED_EDITOR_VERSION;
   SetWindowTitle(windowtitle.c_str());
@@ -85,7 +123,8 @@ bool Editor::init() {
 
 bool Editor::initResourcemanager() {
   m_engine.init();
-
+  if (!fs::exists(EDITOR_WORKING_DIR))
+    fs::create_directories(EDITOR_WORKING_DIR);
   return true;
 }
 
@@ -109,6 +148,37 @@ bool Editor::initImgui() {
                         "fonts/JetBrainsMonoNerdFont-Bold.ttf");
   }
   return true;
+}
+
+bool Editor::saveSettings() {
+  std::ofstream file;
+  file.open(EDITOR_SETTINGS_FILE, std::ios::binary);
+  if (!file) {
+    logging::logwarning("[Editor::saveSettings] Unable to save editor settings: %s",
+                        EDITOR_SETTINGS_FILE);
+    return false;
+  }
+  file.write((char*)&m_imguiSettings, sizeof(m_imguiSettings));
+  file.close();
+  return true;
+}
+
+bool Editor::loadSettings() {
+  std::ifstream file;
+  file.open(EDITOR_SETTINGS_FILE, std::ios::binary);
+  if (!file) {
+    logging::logwarning("[Editor::loadSettings] Unable to load editor settings: %s",
+                        EDITOR_SETTINGS_FILE);
+    return false;
+  }
+  file.read((char*)&m_imguiSettings, sizeof(m_imguiSettings));
+  file.close();
+  return true;
+}
+
+void Editor::cleanup() {
+  saveSettings();
+  m_resManager.UnloadAll();
 }
 
 void Editor::taskbar() {
@@ -231,7 +301,11 @@ void Editor::objectSelector() {
   if (ImGui::Begin("Object Selector", &m_windows["Object Selector"])) {
     auto scene = m_engine.sceneManager.GetCurrentScene();
     if (ImGui::Button("New Entity")) {
-      scene->CreateEntity();
+      ImGui::OpenPopup("New Entity");
+    }
+    if (ImGui::BeginPopupModal("New Entity", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+      DrawNewEntityCreation(scene);
+      ImGui::EndPopup();
     }
     for (auto root : scene->GetRootEntities())
       DrawEntityNode(scene, root);

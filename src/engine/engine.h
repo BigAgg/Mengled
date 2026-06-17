@@ -12,6 +12,11 @@ using json = nlohmann::json;
 // Predefinitions
 class Entity;
 
+/*
+ComponentRegistration:
+  - give it a name, serialization and deserialization function
+  - storing and managing engine available components
+*/
 struct ComponentRegistration {
   std::string name;
 
@@ -25,11 +30,13 @@ struct ComponentRegistration {
 class ComponentRegistry {
 public:
   static ComponentRegistry& Get();
-  const std::unordered_map<std::string, ComponentRegistration>& GetComponents() const;
+  const std::unordered_map<std::string, ComponentRegistration>&
+  GetComponents() const;
   const ComponentRegistration* FindByName(const std::string& name);
 
   template <typename T>
-  void RegisterComponent(const std::string& name, auto serializeFn, auto deserializeFn);
+  void RegisterComponent(const std::string& name, auto serializeFn,
+                         auto deserializeFn);
 
 private:
   std::unordered_map<std::string, ComponentRegistration> m_components;
@@ -51,6 +58,9 @@ public:
   Entity CreateEntity();
   Entity CreateEntity(const std::string& name);
   Entity CreateEntity(UUID uuid, const std::string& name);
+  void DestroyEntity(Entity entity);
+  void DestroyEntity(UUID uuid);
+  void DestroyEntity(entt::entity entity);
 
   Entity GetEntityByUUID(UUID id);
 
@@ -58,7 +68,13 @@ public:
   void RemoveParent(Entity child);
   std::vector<Entity> GetRootEntities();
 
-  std::unordered_map<uint64_t, entt::entity>* GetMap() { return &m_entityMap; }
+#ifdef MENGLED_DEV
+  std::map<uint64_t, entt::entity>* GetMap() { return &m_entityMap; }
+#else
+  std::unordered_map<uint64_t, entt::entity>* GetMap() {
+    return &m_entityMap;
+  }
+#endif
 
   Matrix GetWorldTransform(Entity entity);
 
@@ -66,7 +82,11 @@ public:
   void Clear();
 
 private:
+#ifdef MENGLED_DEV
+  std::map<uint64_t, entt::entity> m_entityMap;
+#else
   std::unordered_map<uint64_t, entt::entity> m_entityMap;
+#endif
   bool m_twoD = false;
 
 public:
@@ -86,13 +106,23 @@ public:
   Entity(entt::entity handle, Scene* scene);
 
   template <typename T, typename... Args> T& AddComponent(Args&&... args) {
-    return m_scene->registry.emplace<T>(m_handle, std::forward<Args>(args)...);
+    return m_scene->registry.emplace<T>(m_handle,
+                                        std::forward<Args>(args)...);
   }
 
-  template <typename T> T& GetComponent() { return m_scene->registry.get<T>(m_handle); }
+  template <typename T> T& GetComponent() {
+    return m_scene->registry.get<T>(m_handle);
+  }
+  template <typename T> T* TryGetComponent() {
+    return m_scene->registry.get<T>(m_handle);
+  }
 
-  template <typename T> bool HasComponent() const { return m_scene->registry.all_of<T>(m_handle); }
-  template <typename T> void RemoveComponent() const { m_scene->registry.remove<T>(m_handle); }
+  template <typename T> bool HasComponent() const {
+    return m_scene->registry.all_of<T>(m_handle);
+  }
+  template <typename T> void RemoveComponent() const {
+    m_scene->registry.remove<T>(m_handle);
+  }
 
   operator bool() const { return m_handle != entt::null; }
 

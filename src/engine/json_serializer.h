@@ -51,12 +51,12 @@ static void DeserializeCamera3D(Camera3D& c, const json& json) {
   c.up = DeserializeVector3(u);
 }
 // Transform 2D
-static json SerializeTransform2D(const TransformComponent2D& transform) {
+static json SerializeTransform2D(const Transform2D& transform) {
   return {{"Position", SerializeVector2(transform.position)},
           {"Scale", SerializeVector2(transform.scale)},
           {"Rotation", transform.rotation}};
 }
-static void DeserializeTransform2D(TransformComponent2D& transform, const json& json) {
+static void DeserializeTransform2D(Transform2D& transform, const json& json) {
   auto p = json["Position"];
   transform.position = DeserializeVector2(p);
   auto s = json["Scale"];
@@ -64,12 +64,12 @@ static void DeserializeTransform2D(TransformComponent2D& transform, const json& 
   transform.rotation = json["Rotation"];
 }
 // Transform3D
-static json SerializeTransform3D(const TransformComponent3D& transform) {
+static json SerializeTransform3D(const Transform3D& transform) {
   return {{"Position", SerializeVector3(transform.position)},
           {"Rotation", SerializeVector3(transform.rotation)},
           {"Scale", SerializeVector3(transform.scale)}};
 }
-static void DeserializeTransform3D(TransformComponent3D& transform, const json& json) {
+static void DeserializeTransform3D(Transform3D& transform, const json& json) {
   auto p = json["Position"];
   transform.position = DeserializeVector3(p);
 
@@ -94,4 +94,16 @@ static json SerializeRelationship(const RelationshipComponent& r) {
 }
 static void DeserializeRelationship(RelationshipComponent& r, const json& json) {
   r.parent = (uint64_t)json["Parent"];
+}
+// Gravity
+static json SerializeGravity(const Gravity& g) { return {"Force", SerializeVector3(g.force)}; }
+static void DeserializeGravity(Gravity& g, const json& json) { g.force = DeserializeVector3(json); }
+// RigidBody
+static json SerializeRigidBody(const RigidBody& r) {
+  return {{"Velocity", SerializeVector3(r.velocity)},
+          {"Acceleration", SerializeVector3(r.acceleration)}};
+}
+static void DeserializeRigidBody(RigidBody& r, const json& json) {
+  r.velocity = DeserializeVector3(json["Velocity"]);
+  r.acceleration = DeserializeVector3(json["Acceleration"]);
 }

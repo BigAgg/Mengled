@@ -4,6 +4,7 @@
 #include "json_serializer.h"
 #include "raymath.h"
 #include "utils/logging.h"
+#include <cstdint>
 #include <fstream>
 
 using json = nlohmann::json;
@@ -75,16 +76,38 @@ Entity Scene::CreateEntity(UUID uuid, const std::string& name) {
 
   entity.AddComponent<IDComponent>(uuid);
   entity.AddComponent<NameComponent>(name);
-
-  if (m_twoD)
-    entity.AddComponent<TransformComponent2D>();
-  else
-    entity.AddComponent<TransformComponent3D>();
   entity.AddComponent<RelationshipComponent>();
 
   m_entityMap[(uint64_t)uuid] = handle;
 
   return entity;
+}
+
+void Scene::DestroyEntity(Entity entity) {
+  if (!entity)
+    return;
+  if (!entity.HasComponent<IDComponent>())
+    return;
+  UUID uuid = entity.GetComponent<IDComponent>().ID;
+  DestroyEntity(uuid);
+}
+void Scene::DestroyEntity(UUID uuid) {
+  auto it = m_entityMap.find((uint64_t)uuid);
+  if (it == m_entityMap.end())
+    return;
+  DestroyEntity(m_entityMap[(uint64_t)uuid]);
+  m_entityMap.erase(it);
+}
+void Scene::DestroyEntity(entt::entity entity) {
+  auto c = registry.try_get<RelationshipComponent>(entity);
+  if (c) {
+    if (c->parent)
+      RemoveParent((Entity(entity, this)));
+    for (const auto& child : c->children) {
+      DestroyEntity(child);
+    }
+  }
+  registry.destroy(entity);
 }
 
 Entity Scene::GetEntityByUUID(UUID id) {
@@ -159,7 +182,7 @@ void Scene::Clear() {
 }
 
 Matrix Scene::GetWorldTransform(Entity entity) {
-  auto& transform = entity.GetComponent<TransformComponent3D>();
+  auto& transform = entity.GetComponent<Transform3D>();
 
   Matrix local = MatrixMultiply(
       MatrixMultiply(
@@ -213,28 +236,32 @@ bool SceneSerializer::Serialize(const std::string& filepath) {
 bool SceneSerializer::Deserialize(const std::string& filepath) {
   std::ifstream file;
   file.open(filepath, std::ios::binary);
-  if (!file)
+  if (!file) {
+    logging::logwarning("[SceneSerializer::Deserialize] Unable to open file: %s", filepath);
     return false;
-
+  }
+  logging::loginfo("[SceneSerializer::Deserialize] Loading scene from file: %s", filepath);
   json root;
   file >> root;
   file.close();
   m_scene->Clear();
   // Create entites
+  logging::loginfo("Deserialize Entities...");
   for (auto& entityJson : root["Entities"]) {
-    logging::loginfo("Deserializing next component...");
+    logging::loginfo("Deserializing entity...");
     UUID uuid = (uint64_t)entityJson["UUID"]["UUID"];
     std::string name = entityJson["Name"]["Name"];
     logging::loginfo("Name: %s UUID: %s", name.c_str(), std::to_string(uuid));
 
     Entity entity = m_scene->CreateEntity(uuid, name);
     for (auto& component : ComponentRegistry::Get().GetComponents()) {
-      logging::loginfo("Deserializing component: %s", component.first.c_str());
-      component.second.Deserialize(entity, entityJson);
-      logging::loginfo("Finished...");
+      if (component.second.HasComponent(entity)) {
+        logging::loginfo("Deserializing component: %s", component.first.c_str());
+        component.second.Deserialize(entity, entityJson);
+      }
     }
   }
-  logging::loginfo("All Root entities loaded");
+  logging::loginfo("Entities Deserialized!");
   // Recreate relationships
   for (auto& entityJson : root["Entities"]) {
     logging::loginfo("Building Relationship for next entity...");
@@ -246,7 +273,8 @@ bool SceneSerializer::Deserialize(const std::string& filepath) {
       continue;
 
     UUID parentID = (uint64_t)entityJson["Relationship"]["Parent"];
-    logging::loginfo("Parent: %s", std::to_string(parentID).c_str());
+    logging::loginfo("Parent: %s Child: %s", std::to_string(parentID).c_str(),
+                     std::to_string(uuid).c_str());
     if (parentID == 0)
       continue;
     Entity parent = m_scene->GetEntityByUUID(parentID);
@@ -254,6 +282,7 @@ bool SceneSerializer::Deserialize(const std::string& filepath) {
       continue;
     m_scene->SetParent(entity, parent);
   }
+  logging::loginfo("[SceneSerializer::Deserialize] Scene loaded from file: %s", filepath);
   return true;
 }
 
@@ -264,15 +293,17 @@ void Engine::init() {
 
 void Engine::RegisterEngineComponents() {
   auto& registry = ComponentRegistry::Get();
-  registry.RegisterComponent<TransformComponent3D>("Transform3D", SerializeTransform3D,
-                                                   DeserializeTransform3D);
-  registry.RegisterComponent<TransformComponent2D>("Transform2D", SerializeTransform2D,
-                                                   DeserializeTransform2D);
+  registry.RegisterComponent<Transform3D>("Transform3D", SerializeTransform3D,
+                                          DeserializeTransform3D);
+  registry.RegisterComponent<Transform2D>("Transform2D", SerializeTransform2D,
+                                          DeserializeTransform2D);
   registry.RegisterComponent<TagComponent>("Tag", SerializeTag, DeserializeTag);
   registry.RegisterComponent<IDComponent>("UUID", SerializeID, DeserializeID);
   registry.RegisterComponent<NameComponent>("Name", SerializeName, DeserializeName);
   registry.RegisterComponent<RelationshipComponent>("Relationship", SerializeRelationship,
                                                     DeserializeRelationship);
+  registry.RegisterComponent<Gravity>("Gravity", SerializeGravity, DeserializeGravity);
+  registry.RegisterComponent<RigidBody>("RigidBody", SerializeRigidBody, DeserializeRigidBody);
 }
 
 // Tests
