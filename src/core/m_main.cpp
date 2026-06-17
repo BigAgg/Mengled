@@ -1,6 +1,6 @@
 #include "m_main.h"
-#include "engine/gui_utilities.h"
 #include "engine/engine.h"
+#include "engine/gui_utilities.h"
 #include "utils/logging.h"
 #include "utils/timer.h"
 #include <filesystem>
@@ -15,7 +15,7 @@
 
 namespace fs = std::filesystem;
 
-int m_main(int argc, char *argv[]) {
+int m_main(int argc, char* argv[]) {
   std::string args;
   for (int i = 0; i < argc; i++) {
     args += "\t\t";
@@ -26,18 +26,30 @@ int m_main(int argc, char *argv[]) {
       args += "\n";
   }
 #ifndef NDEBUG
+  if (!fs::exists("crashes/"))
+    fs::create_directories("crashes/");
   if (!fs::exists("logs/"))
     fs::create_directories("logs/");
-  logging::startlogging("logs/", "log_" + strings::GetTimestamp() + ".txt");
+  const auto& logfiles = fs::directory_iterator("logs/");
+  std::vector<std::string> todelete;
+  for (const auto& logfile : logfiles) {
+    todelete.push_back(logfile.path().string());
+  }
+  for (size_t i = todelete.size(); i > 4; i--) {
+    std::remove(todelete[i - 1].c_str());
+  }
+  logging::startlogging("logs/",
+                        "log_" + strings::GetTimestamp() + ".txt");
 #endif
   logging::loginfo("Starting Mengled with arguments:\n%s", args.c_str());
 
   try {
     Mengled m;
     m.run();
-  } catch (const std::exception &e) {
+  } catch (const std::exception& e) {
     logging::logerror("[m_main] %s", e.what());
-    logging::backuplog("logs/", true);
+    logging::stoplogging();
+    logging::backuplog("crashes/", true);
     return EXIT_FAILURE;
   }
   return EXIT_SUCCESS;
@@ -49,7 +61,8 @@ void Mengled::run() {
   tests();
   loadSettings();
   if (!initRaylib())
-    throw std::runtime_error("[Mengled::run] Unable to initialize raylib!");
+    throw std::runtime_error(
+        "[Mengled::run] Unable to initialize raylib!");
   if (!initResourcemanager())
     throw std::runtime_error(
         "[Mengled::run] Unable to initialize resourcemanager!");
@@ -116,12 +129,12 @@ void Mengled::startupWindow() {
     BeginDrawing();
     ClearBackground(BLACK);
     DrawFPS(10, 10);
-    DrawTexturePro(
-        bkg,
-        {0, 0, static_cast<float>(bkg.width), static_cast<float>(bkg.height)},
-        {0, 0, static_cast<float>(GetScreenWidth()),
-         static_cast<float>(GetScreenHeight())},
-        {0, 0}, 0.0f, c);
+    DrawTexturePro(bkg,
+                   {0, 0, static_cast<float>(bkg.width),
+                    static_cast<float>(bkg.height)},
+                   {0, 0, static_cast<float>(GetScreenWidth()),
+                    static_cast<float>(GetScreenHeight())},
+                   {0, 0}, 0.0f, c);
     EndDrawing();
   }
 }
@@ -141,12 +154,12 @@ void Mengled::loop() {
     m_wm.Update();
     BeginDrawing();
     ClearBackground(GRAY);
-    DrawTexturePro(
-        bkg,
-        {0, 0, static_cast<float>(bkg.width), static_cast<float>(bkg.height)},
-        {0, 0, static_cast<float>(GetScreenWidth()),
-         static_cast<float>(GetScreenHeight())},
-        {0, 0}, 0.0f, WHITE);
+    DrawTexturePro(bkg,
+                   {0, 0, static_cast<float>(bkg.width),
+                    static_cast<float>(bkg.height)},
+                   {0, 0, static_cast<float>(GetScreenWidth()),
+                    static_cast<float>(GetScreenHeight())},
+                   {0, 0}, 0.0f, WHITE);
     m_wm.Draw();
     DrawFPS(10, 10);
     EndDrawing();
@@ -166,17 +179,17 @@ void Mengled::setupMainMenu() {
   ptr->SetName("Main Menu");
   ptr->SetFlags(UiWindowFlags_NoMove | UiWindowFlags_NoResize |
                 UiWindowFlags_NoTitleBar | UiWindowFlags_NoBackground);
-  ptr->CreateWidget<Button>(t, Rectangle{20, buttonypos, 150, 50}, "New", []() {
-    logging::loginfo("New Game button clicked!");
-  });
+  ptr->CreateWidget<Button>(
+      t, Rectangle{20, buttonypos, 150, 50}, "New",
+      []() { logging::loginfo("New Game button clicked!"); });
   buttonypos += 70;
   ptr->CreateWidget<Button>(
       t, Rectangle{20, buttonypos, 150, 50}, "Load",
       []() { logging::loginfo("Load Game button clicked!"); });
   buttonypos += 70;
 #ifdef MENGLED_DEV
-  ptr->CreateWidget<Button>(t, Rectangle{20, buttonypos, 150, 50}, "Editor",
-                            []() {
+  ptr->CreateWidget<Button>(t, Rectangle{20, buttonypos, 150, 50},
+                            "Editor", []() {
                               Editor e;
                               SetWindowState(FLAG_WINDOW_RESIZABLE);
                               e.run();
@@ -215,7 +228,7 @@ void Mengled::setupSettingsMenu() {
   auto cb = ptr->CreateWidget<ComboBox>(
       "Resolution", t, Rectangle{20, buttonypos, 150, 50},
       std::vector<std::string>{"2560x1440", "1920x1080", "1280x720"}, 0,
-      [&](const std::string &option) {
+      [&](const std::string& option) {
         logging::loginfo("Selected resolution: %s", option.c_str());
         const std::string delimiter = "x";
         size_t pos = option.find(delimiter);
@@ -243,7 +256,7 @@ void Mengled::setupSettingsMenu() {
       });
   const std::string res =
       std::to_string(m_settings.w) + "x" + std::to_string(m_settings.h);
-  const auto &options = cb->GetOptions();
+  const auto& options = cb->GetOptions();
   for (size_t i = 0; i < options.size(); i++) {
     if (options[i] != res)
       continue;
@@ -275,7 +288,7 @@ void Mengled::loadSettings() {
   if (!file)
     return;
   // Reading file in binary
-  file.read((char *)&m_settings, sizeof(m_settings));
+  file.read((char*)&m_settings, sizeof(m_settings));
 }
 
 void Mengled::saveSettings() {
@@ -297,7 +310,7 @@ void Mengled::saveSettings() {
   if (!file)
     return;
   // Saving to file in binary
-  file.write((char *)&m_settings, sizeof(m_settings));
+  file.write((char*)&m_settings, sizeof(m_settings));
 }
 
 void Mengled::cleanup() {
@@ -306,6 +319,4 @@ void Mengled::cleanup() {
   m_resManager.UnloadAll();
 }
 
-void Mengled::tests(){
-  TestEngine();
-}
+void Mengled::tests() { TestEngine(); }
