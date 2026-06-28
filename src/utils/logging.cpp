@@ -9,6 +9,9 @@
 #include <iomanip>
 #include <chrono>
 #include <sstream>
+#include <algorithm>
+#include <cstdio>
+#include <streambuf>
 
 static std::string lastWarning = "";
 static std::vector<std::string> warnings;

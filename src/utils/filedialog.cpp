@@ -1,5 +1,9 @@
 #include "filedialog.h"
 #include <nfd.h>
+#include <string>
+#include <vector>
+#include <utility>
+#include <Windows.h>
 
 std::string OpenFileDialog(const std::vector<std::string>& filters, std::string delimiter) {
   NFD_Init();
@@ -102,4 +106,8 @@ std::string OpenDirectoryDialog() {
       c = '/';
   }
   return outStr;
+}
+
+void OpenPath(const std::string& path) {
+  ShellExecute(NULL, "open", path.c_str(), NULL, NULL, SW_SHOWDEFAULT);
 }

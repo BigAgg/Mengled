@@ -1,11 +1,19 @@
 #pragma once
 
-#include "components.h"
+#include "UUID.h"
 #include <cstdint>
-#include <entt/entt.hpp>
-#include <nlohmann/json.hpp>
+#include <entt/entity/entity.hpp>
+#include <entt/entity/fwd.hpp>
+#include <entt/entity/registry.hpp>
+#include <nlohmann/json_fwd.hpp>
 #include <string>
 #include <unordered_map>
+#include <vector>
+#include <map>
+#include <raylib.h>
+#include <functional>
+#include <utility>
+#include <memory>
 
 using json = nlohmann::json;
 
@@ -52,9 +60,6 @@ Scene:
 */
 class Scene {
 public:
-  Scene() = default;
-  Scene(bool twoD);
-
   Entity CreateEntity();
   Entity CreateEntity(const std::string& name);
   Entity CreateEntity(UUID uuid, const std::string& name);

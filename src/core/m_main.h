@@ -1,7 +1,5 @@
 #pragma once
 
-#define MENGLED_DEV
-
 #include "engine/gui_utilities.h"
 #include "engine/resourcemanager.h"
 
@@ -13,7 +11,7 @@ public:
 
 private:
   // initializing process
-  bool initRaylib();
+  bool initRaylib() const;
   bool initResourcemanager();
   void startupWindow();
 
@@ -38,8 +36,15 @@ private:
   void tests();
 
   struct {
-    int w, h, fps, device, posx, posy;
-    bool borderless, vsync, maximized;
+    int w = 1080;
+    int h = 720;
+    int fps = 60;
+    int device = 0;
+    int posx = 0;
+    int posy = 0;
+    bool borderless = false;
+    bool vsync = true;
+    bool maximized = false;
   } m_settings;
 
   bool m_close = false;

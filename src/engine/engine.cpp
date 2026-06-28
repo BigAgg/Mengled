@@ -1,11 +1,22 @@
 #include "engine.h"
 
 #include "components.h"
+#include "UUID.h"
 #include "json_serializer.h"
 #include "raymath.h"
 #include "utils/logging.h"
 #include <cstdint>
+#include <cassert>
 #include <fstream>
+#include <string>
+#include <raylib.h>
+#include <vector>
+#include <entt/entity/fwd.hpp>
+#include <algorithm>
+#include <unordered_map>
+#include <nlohmann/json_fwd.hpp>
+#include <utility>
+#include <memory>
 
 using json = nlohmann::json;
 

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <chrono>
+#include <ratio>
 
 class Timer {
 public:

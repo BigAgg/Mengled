@@ -4,6 +4,9 @@
 #include <cassert>
 #include <fstream>
 #include <imgui.h>
+#include <functional>
+#include <string>
+#include <utility>
 
 void WindowControl::RegisterWindow(const std::string& name, bool open,
                                    std::function<void()> function,

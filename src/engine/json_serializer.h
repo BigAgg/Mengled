@@ -2,6 +2,9 @@
 
 #include "components.h"
 #include <nlohmann/json.hpp>
+#include <nlohmann/json_fwd.hpp>
+#include <cstdint>
+#include <raylib.h>
 
 using json = nlohmann::json;
 
@@ -22,10 +25,10 @@ static json SerializeCamera2D(const Camera2D& c) {
           {"Zoom", c.zoom}};
 }
 static void DeserializeCamera2D(Camera2D& c, const json& json) {
-  auto o = json["Offset"];
+  auto& o = json["Offset"];
   c.offset = DeserializeVector2(o);
 
-  auto t = json["Target"];
+  auto& t = json["Target"];
   c.target = DeserializeVector2(t);
 
   c.rotation = json["Rotation"];
@@ -41,13 +44,13 @@ static json SerializeCamera3D(const Camera3D& c) {
           {"up", SerializeVector3(c.up)}};
 }
 static void DeserializeCamera3D(Camera3D& c, const json& json) {
-  auto p = json["Position"];
+  auto& p = json["Position"];
   c.position = DeserializeVector3(p);
-  auto t = json["Target"];
+  auto& t = json["Target"];
   c.target = DeserializeVector3(t);
   c.fovy = json["fovy"];
   c.projection = json["Projection"];
-  auto u = json["up"];
+  auto& u = json["up"];
   c.up = DeserializeVector3(u);
 }
 // Transform 2D
@@ -57,9 +60,9 @@ static json SerializeTransform2D(const Transform2D& transform) {
           {"Rotation", transform.rotation}};
 }
 static void DeserializeTransform2D(Transform2D& transform, const json& json) {
-  auto p = json["Position"];
+  auto& p = json["Position"];
   transform.position = DeserializeVector2(p);
-  auto s = json["Scale"];
+  auto& s = json["Scale"];
   transform.scale = DeserializeVector2(s);
   transform.rotation = json["Rotation"];
 }
@@ -70,13 +73,13 @@ static json SerializeTransform3D(const Transform3D& transform) {
           {"Scale", SerializeVector3(transform.scale)}};
 }
 static void DeserializeTransform3D(Transform3D& transform, const json& json) {
-  auto p = json["Position"];
+  auto& p = json["Position"];
   transform.position = DeserializeVector3(p);
 
-  auto r = json["Rotation"];
+  auto& r = json["Rotation"];
   transform.rotation = DeserializeVector3(r);
 
-  auto s = json["Scale"];
+  auto& s = json["Scale"];
   transform.scale = DeserializeVector3(s);
 }
 // Tag

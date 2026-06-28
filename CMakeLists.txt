@@ -6,11 +6,12 @@ project(Mengled
     LANGUAGES C CXX
 )
 
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
+set(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreaded)
 
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_BINARY_DIR)
     message(FATAL_ERROR "In-source builds are not allowed. Use: cmake -B build")
@@ -94,7 +95,6 @@ add_library(imgui STATIC
     ${imgui_SOURCE_DIR}/imgui_draw.cpp
     ${imgui_SOURCE_DIR}/imgui_tables.cpp
     ${imgui_SOURCE_DIR}/imgui_widgets.cpp
-    ${imgui_SOURCE_DIR}/imgui_demo.cpp
     ${imgui_SOURCE_DIR}/misc/cpp/imgui_stdlib.cpp
 )
 
@@ -176,6 +176,16 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     nlohmann_json::nlohmann_json
 )
 
+if(WIN32)
+    target_link_libraries(${PROJECT_NAME} PRIVATE
+        ws2_32
+        wldap32
+        crypt32
+        advapi32
+        bcrypt
+    )
+endif()
+
 if(UNIX AND NOT APPLE)
     # Required by some GLFW setups
     find_package(X11 REQUIRED)
@@ -192,6 +202,9 @@ source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}/src" FILES ${PROJECT_SOURCES} ${P
 # Expose project version to C++ code as APP_VERSION
 target_compile_definitions(${PROJECT_NAME} PRIVATE
     APP_VERSION=\"${PROJECT_VERSION}\"
+    APP_IMGUI_IMPLEMENTATION
+    APP_IMGUI_DOCHOST
+    MENGLED_DEV
 )
 
 if(MSVC)

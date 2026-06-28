@@ -6,6 +6,7 @@
 #include <vector>
 #include <filesystem>
 #include "utils/filedialog.h"
+#include <cstdarg>
 
 namespace ImGui {
 inline void HelpMarker (const char* fmt, ...) {
@@ -76,14 +77,14 @@ void Filewalker (std::string& path, std::vector<std::string>& files) {
           break;
         }
         else
-          OpenFolder(file);
+          OpenPath(file);
       }
       ImGui::SetItemTooltip("%s", file.c_str());
     }
     ImGui::EndListBox();
   }
   if (ImGui::Button("Ordner öffnen"))
-    OpenFolder(path);
+    OpenPath(path);
 }
 }
 

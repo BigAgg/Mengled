@@ -6,7 +6,7 @@
 #include <map>
 #include <string>
 
-#define MENGLED_EDITOR_VERSION "v0.1.0"
+constexpr auto MENGLED_EDITOR_VERSION = "v0.1.0";
 
 class Editor {
 public:
@@ -22,7 +22,7 @@ private:
   bool initImgui();
 
   bool loadSettings();
-  bool saveSettings();
+  bool saveSettings() const;
 
   void cleanup();
 

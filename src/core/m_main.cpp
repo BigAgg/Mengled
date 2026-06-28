@@ -12,6 +12,11 @@
 #ifdef MENGLED_DEV
 #include "editor/editor.h"
 #endif
+#include <string>
+#include <cstdlib>
+#include <exception>
+#include <cstdio>
+#include <vector>
 
 namespace fs = std::filesystem;
 
@@ -25,7 +30,7 @@ int m_main(int argc, char* argv[]) {
     if (i != argc - 1)
       args += "\n";
   }
-#ifndef NDEBUG
+#ifdef NDEBUG
   if (!fs::exists("crashes/"))
     fs::create_directories("crashes/");
   if (!fs::exists("logs/"))
@@ -55,7 +60,7 @@ int m_main(int argc, char* argv[]) {
   return EXIT_SUCCESS;
 }
 
-#define SETTINGS_BIN "settings.bin"
+constexpr auto SETTINGS_BIN = "settings.bin";
 
 void Mengled::run() {
   tests();
@@ -74,7 +79,7 @@ void Mengled::run() {
   saveSettings();
 }
 
-bool Mengled::initRaylib() {
+bool Mengled::initRaylib() const {
   std::string windowtitle = "Mengled v";
   windowtitle += APP_VERSION;
   InitWindow(m_settings.w, m_settings.h, windowtitle.c_str());
@@ -148,8 +153,10 @@ void Mengled::loop() {
     if (IsWindowResized()) {
       auto ptr = m_wm.GetWindow("Main Menu");
       const Rectangle MENU_BOUNDS = ptr->GetWindowRect();
-      ptr->SetPosition(GetScreenWidth() / 2 - MENU_BOUNDS.width / 2,
-                       GetScreenHeight() / 2 - MENU_BOUNDS.height / 2);
+      ptr->SetPosition(GetScreenWidth() / static_cast<float>(2) -
+                           MENU_BOUNDS.width / 2,
+                       GetScreenHeight() / static_cast<float>(2) -
+                           MENU_BOUNDS.height / 2);
     }
     m_wm.Update();
     BeginDrawing();
@@ -209,8 +216,10 @@ void Mengled::setupMainMenu() {
   buttonypos += 70;
 
   const Rectangle MENU_BOUNDS = ptr->GetWindowRect();
-  ptr->SetPosition(GetScreenWidth() / 2 - MENU_BOUNDS.width / 2,
-                   GetScreenHeight() / 2 - MENU_BOUNDS.height / 2);
+  ptr->SetPosition(
+      GetScreenWidth() / static_cast<float>(2) - MENU_BOUNDS.width / 2,
+                   GetScreenHeight() / static_cast<float>(2) -
+                       MENU_BOUNDS.height / 2);
 }
 
 void Mengled::setupSettingsMenu() {
@@ -251,8 +260,10 @@ void Mengled::setupSettingsMenu() {
         }
         auto ptr = m_wm.GetWindow("Main Menu");
         const Rectangle MENU_BOUNDS = ptr->GetWindowRect();
-        ptr->SetPosition(GetScreenWidth() / 2 - MENU_BOUNDS.width / 2,
-                         GetScreenHeight() / 2 - MENU_BOUNDS.height / 2);
+        ptr->SetPosition(GetScreenWidth() / static_cast<float>(2) -
+                             MENU_BOUNDS.width / 2,
+                         GetScreenHeight() / static_cast<float>(2) -
+                             MENU_BOUNDS.height / 2);
       });
   const std::string res =
       std::to_string(m_settings.w) + "x" + std::to_string(m_settings.h);

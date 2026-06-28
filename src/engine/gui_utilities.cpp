@@ -5,7 +5,12 @@
 #endif
 
 #include <cstdio>
-#include <imgui.h>
+#include <vector>
+#include <memory>
+#include <string>
+#include <cassert>
+#include <raylib.h>
+#include <utility>
 
 Button::Button(Texture &t, Rectangle rect, std::string text, Callback onClick)
     : texture(t), bounds(rect), label(std::move(text)),
@@ -281,7 +286,7 @@ void UIManager::SetFlag(UiWindowFlags flag) { flags = flags | flag; }
 
 void UIManager::ClearFlag(UiWindowFlags flag) { flags = flags & ~flag; }
 
-bool UIManager::IsFlagActive(UiWindowFlags flag) {
+bool UIManager::IsFlagActive(UiWindowFlags flag) const {
   return (flags & flag) == flag;
 }
 

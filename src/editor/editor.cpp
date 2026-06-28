@@ -3,7 +3,7 @@
 #include "engine/engine.h"
 #include "engine/gui_utilities.h"
 #include "engine/resourcemanager.h"
-#include "filedialog.h"
+#include "utils/filedialog.h"
 #include "imgui/ImGui_windowcontrol.h"
 #include "utils/logging.h"
 #include <filesystem>
@@ -11,22 +11,26 @@
 #include <imgui.h>
 #include <misc/cpp/imgui_stdlib.h>
 #include <rlImGui.h>
+#include <raylib.h>
+#include <stdexcept>
+#include <cstdint>
+#include <string>
 
-#define EDITOR_WORKING_DIR "editor/"
-#define EDITOR_SETTINGS_FILE EDITOR_WORKING_DIR "settings.bin"
+constexpr auto EDITOR_WORKING_DIR = "editor/";
+constexpr auto EDITOR_SETTINGS_FILE = "editor/settings.bin";
 
-#define FILE_PROJECT_FILTER "Project file:mgd"
-#define FILE_PROJECT_FILTER_BIN "Project Binary:bin"
-#define FILE_PICTURE_FILTER "Picture:png,jpg,jpeg"
-#define FILE_SOUND_FILTER "Sound file:mp3"
-#define FILE_SCENE_FILTER "Scene:json,scn"
+constexpr auto FILE_PROJECT_FILTER = "Project file:mgd";
+constexpr auto FILE_PROJECT_FILTER_BIN = "Project Binary:bin";
+constexpr auto FILE_PICTURE_FILTER = "Picture:png,jpg,jpeg";
+constexpr auto FILE_SOUND_FILTER = "Sound file:mp3";
+constexpr auto FILE_SCENE_FILTER = "Scene:json,scn";
 
 namespace fs = std::filesystem;
 
 // Helper functions for drawing
-void DrawComponentsNode(Scene* scene, Entity entity) {}
+static void DrawComponentsNode(Scene* scene, Entity entity) {}
 
-void DrawNewEntityCreation(Scene* scene, Entity entity = Entity()) {
+static void DrawNewEntityCreation(Scene* scene, Entity entity = Entity()) {
   static std::string name;
   ImGui::InputText("Name", &name);
   if (ImGui::Button("Cancel")) {
@@ -49,7 +53,7 @@ void DrawNewEntityCreation(Scene* scene, Entity entity = Entity()) {
   }
 }
 
-void DrawEntityNode(Scene* scene, Entity entity) {
+static void DrawEntityNode(Scene* scene, Entity entity) {
   auto& name = entity.GetComponent<NameComponent>();
   ImGui::PushID(entity);
   if (ImGui::TreeNode(
@@ -162,12 +166,22 @@ bool Editor::initImgui() {
     if (ImGui::MenuItem("Load Project")) {
       const std::string& path =
           OpenFileDialog({FILE_PROJECT_FILTER, FILE_PROJECT_FILTER_BIN});
+      if (!path.empty()) {
+				Scene* scene = m_engine.sceneManager.GetCurrentScene();
+				auto ss = SceneSerializer(scene);
+				ss.Deserialize(path);
+      }
     }
     if (ImGui::MenuItem("Save")) {
     }
     if (ImGui::MenuItem("Save as")) {
       const std::string& path =
           SaveFileDialog({FILE_PROJECT_FILTER, FILE_PROJECT_FILTER_BIN});
+      if (!path.empty()) {
+				Scene* scene = m_engine.sceneManager.GetCurrentScene();
+				auto ss = SceneSerializer(scene);
+				ss.Serialize(path);
+      }
     }
     if (ImGui::MenuItem("Exit")) {
       m_close = true;
@@ -176,7 +190,7 @@ bool Editor::initImgui() {
   return true;
 }
 
-bool Editor::saveSettings() {
+bool Editor::saveSettings() const {
   std::ofstream file;
   file.open(EDITOR_SETTINGS_FILE, std::ios::binary);
   if (!file) {

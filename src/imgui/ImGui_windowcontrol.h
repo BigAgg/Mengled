@@ -6,7 +6,7 @@
 
 struct WindowInformation {
   bool open = false;
-  int flags;
+  int flags = 0;
   std::function<void()> function;
 
   explicit operator bool() { return open; }

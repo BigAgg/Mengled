@@ -1,6 +1,9 @@
 #include "resourcemanager.h"
 
 #include <cassert>
+#include <raylib.h>
+#include <string>
+#include <string_view>
 
 ResourceManager::~ResourceManager() {
 	UnloadAll();

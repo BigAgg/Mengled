@@ -6,6 +6,18 @@
 #include <string>
 #include <vector>
 #include <memory>
+#include <type_traits>
+#include <utility>
+#include <array>
+#include <map>
+#include <exception>
+#include <forward_list>
+#include <fstream>
+#include <list>
+#include <optional>
+#include <sstream>
+#include <tuple>
+#include <unordered_map>
 
 typedef int UiWindowFlags;      // -> enum UiWindowFlags_		-> Used for UIManager.flags
 enum UiWindowFlags_ {
@@ -308,7 +320,7 @@ public:
 	void SetFlags(UiWindowFlags flags);
 	void SetFlag(UiWindowFlags flag);
 	void ClearFlag(UiWindowFlags flag);
-	bool IsFlagActive(UiWindowFlags flag);
+	bool IsFlagActive(UiWindowFlags flag) const;
 
   void SetEnabled(bool value);
   bool GetEnabled() const;
